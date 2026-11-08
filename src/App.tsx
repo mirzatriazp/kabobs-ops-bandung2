@@ -12,6 +12,9 @@ import './components/VisitAM.css'
 import PIQPerformance from './components/PIQPerformance'
 import ProfileOutlet from './components/ProfileOutlet'
 import DataTeam from './components/DataTeam'
+import Schedule from './components/Schedule'
+import TeamOnDutyDashboard from './components/TeamOnDutyDashboard'
+import InventoryDSO from './components/InventoryDSO'
 type Profile = {
   id: string
   nik: string
@@ -178,9 +181,13 @@ export default function App() {
         </div>
         {activePage === 'Dashboard' ? <>
           <section className="hero"><div className="eyebrow light">LIVE OPERATIONS · AREA BANDUNG 2</div><h2>{greeting()}, {name}!</h2><p>Pantau performa, aktivitas tim, agenda, dan tindak lanjut operasional dalam satu sistem.</p><span className="hero-note">Database: Terhubung · Role: {profile.role}</span></section>
-          <DashboardSales role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} />
+          <DashboardSales role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /><TeamOnDutyDashboard
+  role={profile.role}
+  outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+  outlets={outlets}
+/>
           <div className="stats stats-secondary">
-            {['Nilai PIQ','Tim In Charge Hari Ini'].map(title => <div className="stat-card" key={title}><div className="stat-title">{title}</div><div className="stat-empty">Belum ada data</div><div className="stat-foot">Menunggu integrasi modul terkait</div></div>)}
+            {['Nilai PIQ'].map(title => <div className="stat-card" key={title}><div className="stat-title">{title}</div><div className="stat-empty">Belum ada data</div><div className="stat-foot">Menunggu integrasi modul terkait</div></div>)}
           </div>
           <div className="dashboard-grid">
             <GeneralInformation role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} compact />
@@ -216,6 +223,22 @@ export default function App() {
       role={profile.role}
       outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
       outlets={outlets}
+    />
+    : activePage === 'Schedule'
+  ? <Schedule
+      role={profile.role}
+      outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+      outlets={outlets}
+      month={month}
+      year={year}
+    />
+    : activePage === 'Inventory & DSO'
+  ? <InventoryDSO
+      role={profile.role}
+      outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+      outlets={outlets}
+      month={month}
+      year={year}
     />
 : <section className="panel">
     <div className="feature-icon">✦</div>

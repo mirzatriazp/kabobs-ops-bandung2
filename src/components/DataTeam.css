@@ -6,3 +6,10 @@
 .dt-uniform-heading span{color:#536783}
 .dt-uniform-heading b{color:#14213e}
 @media(max-width:760px){.dt-uniform-heading{flex-direction:column;align-items:flex-start}}
+
+/* Data Team v3: kontrol urutan AM */
+.dt-sort-panel{margin:14px 0 20px;padding:18px;border:1px solid #d8e2f0;border-radius:12px;background:#f6f8fc}
+.dt-sort-panel-header h4{font-size:14px;margin:0 0 7px}.dt-sort-panel-header p{font-size:11px;color:#697d9d;margin:0 0 14px;line-height:1.5}
+.dt-sort-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}.dt-sort-col{background:#fff;border:1px solid #dce4ef;border-radius:10px;padding:12px;min-width:0}.dt-sort-col>strong{display:block;margin:5px 0 14px}.dt-sort-col>label{margin-bottom:12px}
+.dt-sort-row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 4px;border-bottom:1px solid #edf1f7;min-height:42px}.dt-sort-row>span{min-width:0;overflow-wrap:anywhere;font-size:11px}.dt-sort-row small{display:block;color:#8794a9;font-size:10px;margin-top:3px}.dt-sort-arrows{display:flex;gap:5px;flex-shrink:0}.dt-sort-arrows button{background:#fff;color:#12213c;border:1px solid #d3deed;border-radius:7px;font-weight:800;cursor:pointer;min-width:31px;min-height:31px}.dt-sort-arrows button:hover:not(:disabled){background:#ffefbd}.dt-sort-arrows button:disabled{opacity:.35;cursor:not-allowed}.dt-reset{margin-top:13px}
+@media(max-width:760px){.dt-sort-columns{grid-template-columns:1fr}}

@@ -15,9 +15,9 @@ type Member = {
   chef_uniform_qty: Qty; chef_uniform_size: UniformSize | null;
   polo_uniform_qty: Qty; polo_uniform_size: UniformSize | null;
   apron: Availability; name_tag: Availability; headwear: Headwear;
-  notes: string; created_at: string; updated_at: string
+  notes: string; sort_order: number | null; created_at: string; updated_at: string
 }
-type Editor = Omit<Member, 'id' | 'created_at' | 'updated_at'>
+type Editor = Omit<Member, 'id' | 'sort_order' | 'created_at' | 'updated_at'>
 const NEW = (outletId = ''): Editor => ({
   outlet_id: outletId, nik: '', full_name: '', job_title: 'Crew', joined_at: '',
   employment_status: 'Aktif', chef_uniform_qty: 0, chef_uniform_size: '',
@@ -29,6 +29,26 @@ const HEADWEAR: Headwear[] = ['Ada', 'Tidak Ada', 'Hijab']
 const SIZES: UniformSize[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 const uniformTotal = (m: Pick<Member, 'chef_uniform_qty' | 'polo_uniform_qty'>) => Number(m.chef_uniform_qty || 0) + Number(m.polo_uniform_qty || 0)
+type OutletPosition = { outlet_id: string; sort_order: number }
+const leaderFirst = (job: string) => /\b(leader|kepala outlet|store leader|shift leader)\b/i.test(job) ? 0 : 1
+function seniorityCompare(a: Member, b: Member) {
+  const rank = leaderFirst(a.job_title) - leaderFirst(b.job_title)
+  if (rank) return rank
+  const date = (a.joined_at || '9999').localeCompare(b.joined_at || '9999')
+  if (date) return date
+  return a.full_name.localeCompare(b.full_name, 'id')
+}
+function orderCrew(list: Member[]) {
+  const hasCustom = list.some(m => m.sort_order !== null && m.sort_order !== undefined)
+  return [...list].sort((a, b) => {
+    if (hasCustom) {
+      const position = (a.sort_order ?? Number.MAX_SAFE_INTEGER) - (b.sort_order ?? Number.MAX_SAFE_INTEGER)
+      if (position) return position
+    }
+    return seniorityCompare(a, b)
+  })
+}
+
 function tenure(iso: string) {
   if (!iso) return '—'
   const d = new Date(iso + 'T12:00:00'), now = new Date()
@@ -63,26 +83,77 @@ export default function DataTeam({ role, outletId, outlets }: Props) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Aktif')
   const [outletFilter, setOutletFilter] = useState('')
+  const [outletPositions, setOutletPositions] = useState<OutletPosition[]>([])
+  const [sortOpen, setSortOpen] = useState(false)
+  const [sortOutletId, setSortOutletId] = useState('')
+  const [sortSaving, setSortSaving] = useState(false)
   const nameById = useMemo(() => new Map(outlets.map(o => [o.id, o.outlet_name])), [outlets])
+  const orderedOutlets = useMemo(() => [...outlets].sort((a, b) => {
+    const ap = outletPositions.find(o => o.outlet_id === a.id)?.sort_order ?? Number.MAX_SAFE_INTEGER
+    const bp = outletPositions.find(o => o.outlet_id === b.id)?.sort_order ?? Number.MAX_SAFE_INTEGER
+    return ap - bp || a.outlet_name.localeCompare(b.outlet_name, 'id')
+  }), [outlets, outletPositions])
   const load = useCallback(async () => {
     setLoading(true); setError('')
-    let query = supabase.from('ops_team_members').select('*').order('full_name', { ascending: true }).limit(1000)
+    let query = supabase.from('ops_team_members').select('*').limit(1000)
     if (role === 'LEADER') {
       if (!outletId) { setMembers([]); setLoading(false); return }
       query = query.eq('outlet_id', outletId)
     }
-    const { data, error: e } = await query
+    const [memberResult, orderingResult] = await Promise.all([query, supabase.from('ops_team_outlet_order').select('outlet_id,sort_order')])
+    const { data, error: e } = memberResult
+    if (orderingResult.error) { setError(`Gagal membaca urutan outlet: ${orderingResult.error.message}`) }
+    else setOutletPositions((orderingResult.data || []) as OutletPosition[])
     if (e) setError(`Gagal memuat Data Team: ${e.message}`)
     else setMembers((data || []) as Member[])
     setLoading(false)
   }, [role, outletId])
   useEffect(() => { void load() }, [load])
-  const visible = useMemo(() => members.filter(p => {
-    const own = role === 'AM' ? (outletFilter ? p.outlet_id === outletFilter : outletId ? p.outlet_id === outletId : true) : p.outlet_id === outletId
-    const status = statusFilter === 'Semua' || p.employment_status === statusFilter
-    const term = search.trim().toLowerCase()
-    return own && status && (!term || [p.full_name, p.nik, p.job_title, nameById.get(p.outlet_id) || ''].some(v => v.toLowerCase().includes(term)))
-  }), [members, role, outletId, outletFilter, statusFilter, search, nameById])
+  const visible = useMemo(() => {
+    const list = members.filter(p => {
+      const own = role === 'AM' ? (outletFilter ? p.outlet_id === outletFilter : outletId ? p.outlet_id === outletId : true) : p.outlet_id === outletId
+      const status = statusFilter === 'Semua' || p.employment_status === statusFilter
+      const term = search.trim().toLowerCase()
+      return own && status && (!term || [p.full_name, p.nik, p.job_title, nameById.get(p.outlet_id) || ''].some(v => v.toLowerCase().includes(term)))
+    })
+    const groupRank = new Map(orderedOutlets.map((o, i) => [o.id, i]))
+    const grouped = new Map<string, Member[]>()
+    for (const item of list) grouped.set(item.outlet_id, [...(grouped.get(item.outlet_id) || []), item])
+    return [...grouped.entries()]
+      .sort(([a], [b]) => (groupRank.get(a) ?? 999) - (groupRank.get(b) ?? 999))
+      .flatMap(([, crew]) => orderCrew(crew))
+  }, [members, role, outletId, outletFilter, statusFilter, search, nameById, orderedOutlets])
+  const reorderOutlets = async (at: number, step: number) => {
+    if (role !== 'AM' || sortSaving) return
+    const copy = [...orderedOutlets], destination = at + step
+    if (destination < 0 || destination >= copy.length) return
+    ;[copy[at], copy[destination]] = [copy[destination], copy[at]]
+    setSortSaving(true); setError(''); setMessage('')
+    const { error: e } = await supabase.rpc('ops_team_reorder_outlets', { p_ids: copy.map(o => o.id) })
+    if (e) setError(`Gagal menyimpan urutan outlet: ${e.message}`)
+    else { setMessage('Urutan outlet tersimpan untuk AM dan Leader.'); await load() }
+    setSortSaving(false)
+  }
+  const reorderCrew = async (at: number, step: number) => {
+    if (role !== 'AM' || sortSaving || !sortOutletId) return
+    const list = orderCrew(members.filter(m => m.outlet_id === sortOutletId))
+    const destination = at + step
+    if (destination < 0 || destination >= list.length) return
+    ;[list[at], list[destination]] = [list[destination], list[at]]
+    setSortSaving(true); setError(''); setMessage('')
+    const { error: e } = await supabase.rpc('ops_team_reorder_crew', { p_outlet_id: sortOutletId, p_ids: list.map(m => m.id) })
+    if (e) setError(`Gagal menyimpan urutan crew: ${e.message}`)
+    else { setMessage('Urutan crew tersimpan dan tampil juga pada akun Leader.'); await load() }
+    setSortSaving(false)
+  }
+  const resetCrewOrder = async () => {
+    if (role !== 'AM' || sortSaving || !sortOutletId) return
+    setSortSaving(true); setError(''); setMessage('')
+    const { error: e } = await supabase.rpc('ops_team_reset_crew_order', { p_outlet_id: sortOutletId })
+    if (e) setError(`Gagal reset urutan: ${e.message}`)
+    else { setMessage('Kembali ke urutan default: Leader → masa kerja terlama.'); await load() }
+    setSortSaving(false)
+  }
   const activeCount = visible.filter(m => m.employment_status === 'Aktif').length
   const missingAttributes = visible.filter(m => m.employment_status === 'Aktif' && (uniformTotal(m) === 0 || m.apron === 'Belum ada' || m.name_tag === 'Belum ada' || m.headwear === 'Tidak Ada')).length
   const setField = <K extends keyof Editor>(k: K, value: Editor[K]) => setForm(f => ({ ...f, [k]: value }))
@@ -126,13 +197,25 @@ export default function DataTeam({ role, outletId, outlets }: Props) {
     setEditorOpen(false); setEditingId(null); await load()
   }
   return <section className="dt-root">
-    <div className="dt-head"><div><h3>Data Team — Area Bandung 2</h3><p>Data crew, masa kerja, jumlah seragam, dan kelengkapan atribut per outlet.</p></div><div className="dt-actions"><button type="button" className="dt-btn dt-secondary" onClick={() => void load()}>↻ Refresh</button>{role === 'AM' && <button type="button" className="dt-btn dt-primary" onClick={beginCreate}>+ Tambah crew</button>}</div></div>
+    <div className="dt-head"><div><h3>Data Team — Area Bandung 2</h3><p>Data crew, masa kerja, jumlah seragam, dan kelengkapan atribut per outlet.</p></div><div className="dt-actions"><button type="button" className="dt-btn dt-secondary" onClick={() => void load()}>↻ Refresh</button>{role === 'AM' && <><button type="button" className="dt-btn dt-primary" onClick={beginCreate}>+ Tambah crew</button><button type="button" className="dt-btn dt-secondary" onClick={() => { setSortOpen(o => !o); setSortOutletId(current => current || orderedOutlets[0]?.id || '') }}>{sortOpen ? 'Tutup Urutan' : '⚙ Atur Urutan'}</button></>}</div></div>
     {message && <div className="dt-msg dt-ok" role="status">{message}</div>}
     {error && <div className="dt-msg dt-error" role="alert">{error}</div>}
+    {role === 'AM' && sortOpen && <div className="dt-sort-panel">
+      <div className="dt-sort-panel-header"><div><h4>Atur Susunan Data Team</h4><p>Default: tiap outlet dikelompokkan; Leader pertama, kemudian crew berdasarkan join date paling lama. Tombol panah menyimpan urutan khusus untuk semua pengguna.</p></div></div>
+      <div className="dt-sort-columns">
+        <div className="dt-sort-col"><strong>Urutan outlet</strong>
+          {orderedOutlets.map((o, i) => <div className="dt-sort-row" key={o.id}><span>{i + 1}. {o.outlet_name}</span><div className="dt-sort-arrows"><button type="button" title="Naikkan outlet" disabled={sortSaving || i === 0} onClick={() => void reorderOutlets(i, -1)}>↑</button><button type="button" title="Turunkan outlet" disabled={sortSaving || i === orderedOutlets.length - 1} onClick={() => void reorderOutlets(i, 1)}>↓</button></div></div>)}
+        </div>
+        <div className="dt-sort-col"><label>Urutan crew per outlet<select value={sortOutletId} onChange={e => setSortOutletId(e.target.value)}>{orderedOutlets.map(o => <option key={o.id} value={o.id}>{o.outlet_name}</option>)}</select></label>
+          {orderCrew(members.filter(m => m.outlet_id === sortOutletId)).map((m, i, list) => <div className="dt-sort-row" key={m.id}><span>{i + 1}. <strong>{m.full_name}</strong><small>{m.job_title} · {dateLabel(m.joined_at)}</small></span><div className="dt-sort-arrows"><button type="button" title="Naikkan crew" disabled={sortSaving || i === 0} onClick={() => void reorderCrew(i, -1)}>↑</button><button type="button" title="Turunkan crew" disabled={sortSaving || i === list.length - 1} onClick={() => void reorderCrew(i, 1)}>↓</button></div></div>)}
+          <button type="button" className="dt-btn dt-secondary dt-reset" disabled={sortSaving || !sortOutletId} onClick={() => void resetCrewOrder()}>Reset: Leader → masa kerja</button>
+        </div>
+      </div>
+    </div>}
     {role === 'AM' && editorOpen && <form className="dt-editor" onSubmit={e => void save(e)}>
       <div className="dt-editor-head"><h4>{editingId ? 'Edit Data Crew' : 'Tambah Data Crew'}</h4><button type="button" className="dt-btn dt-secondary" onClick={() => setEditorOpen(false)}>Tutup</button></div>
       <div className="dt-form-grid">
-        <label>Outlet<select value={form.outlet_id} disabled={!!editingId} onChange={e => setField('outlet_id', e.target.value)} required><option value="">Pilih outlet</option>{outlets.map(o => <option key={o.id} value={o.id}>{o.outlet_name}</option>)}</select></label>
+        <label>Outlet<select value={form.outlet_id} disabled={!!editingId} onChange={e => setField('outlet_id', e.target.value)} required><option value="">Pilih outlet</option>{orderedOutlets.map(o => <option key={o.id} value={o.id}>{o.outlet_name}</option>)}</select></label>
         <label>NIK<input value={form.nik} onChange={e => setField('nik', e.target.value)} maxLength={40} required placeholder="NIK karyawan" /></label>
         <label>Nama Lengkap<input value={form.full_name} onChange={e => setField('full_name', e.target.value)} maxLength={160} required placeholder="Nama crew" /></label>
         <label>Jabatan<input value={form.job_title} onChange={e => setField('job_title', e.target.value)} maxLength={100} required placeholder="Crew / Leader / Kasir" /></label>
@@ -152,7 +235,7 @@ export default function DataTeam({ role, outletId, outlets }: Props) {
     </form>}
     <div className="dt-stats"><div><span>Jumlah crew ditampilkan</span><strong>{visible.length}</strong></div><div><span>Crew aktif</span><strong>{activeCount}</strong></div><div><span>Crew aktif dengan atribut belum lengkap</span><strong>{missingAttributes}</strong></div></div>
     <div className="dt-filters">
-      {role === 'AM' && <label>Filter Outlet<select value={outletFilter} onChange={e => setOutletFilter(e.target.value)}><option value="">{outletId ? 'Semua pada pilihan halaman' : 'Semua Outlet'}</option>{outlets.map(o => <option key={o.id} value={o.id}>{o.outlet_name}</option>)}</select></label>}
+      {role === 'AM' && <label>Filter Outlet<select value={outletFilter} onChange={e => setOutletFilter(e.target.value)}><option value="">{outletId ? 'Semua pada pilihan halaman' : 'Semua Outlet'}</option>{orderedOutlets.map(o => <option key={o.id} value={o.id}>{o.outlet_name}</option>)}</select></label>}
       <label>Status<select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="Aktif">Aktif</option><option value="Nonaktif">Nonaktif</option><option value="Semua">Semua</option></select></label>
       <label className="dt-search">Cari crew<input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nama, NIK, jabatan..." /></label>
     </div>
@@ -161,6 +244,5 @@ export default function DataTeam({ role, outletId, outlets }: Props) {
       {!loading && visible.length === 0 && <tr><td colSpan={role === 'AM' ? 17 : 15} className="dt-empty">Belum ada data crew untuk filter ini.</td></tr>}
       {loading && <tr><td colSpan={role === 'AM' ? 17 : 15} className="dt-empty">Memuat data crew...</td></tr>}
     </tbody></table></div>
-    <p className="dt-note">Total baju otomatis = Chef + Polo. Data seragam lama tetap disimpan di database; jumlah dan ukuran baru perlu dilengkapi oleh AM.</p>
   </section>
 }
