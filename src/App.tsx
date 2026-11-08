@@ -20,6 +20,7 @@ import TemplateBA from './components/TemplateBA'
 import LiveChat from './components/LiveChat'
 import OperationalOverview from './components/OperationalOverview'
 import './DashboardFinal.css'
+import './BrandingKabobs.css'
 type Profile = {
   id: string
   nik: string
@@ -136,10 +137,10 @@ export default function App() {
     setProfile(null)
   }
 
-  if (loading) return <div className="loading">Memuat KABOBS OPS...</div>
+  if (loading) return <div className="loading">Memuat KABOBS Operational Hub...</div>
   if (!session) return <main className="login-screen">
     <div className="login-panel">
-      <div className="brand-mark">K</div>
+      <img className="kabobs-login-logo" src={`${import.meta.env.BASE_URL}kabobs-logo.png`} alt="Kabobs Premium Kebab" />
       <div className="eyebrow">KABOBS PREMIUM KEBAB</div>
       <h1>Operational Hub</h1>
       <p className="muted">Area Bandung 2 · Masuk menggunakan NIK dan password</p>
@@ -147,7 +148,7 @@ export default function App() {
         <label>NIK<input value={nik} onChange={e => setNik(e.target.value)} inputMode="numeric" placeholder="Masukkan NIK" required /></label>
         <label>Password<input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Masukkan password" required /></label>
         {error && <div className="error" role="alert">{error}</div>}
-        <button className="primary-button" disabled={loggingIn}>{loggingIn ? 'Memverifikasi...' : 'Masuk ke Kabobs OPS'}</button>
+        <button className="primary-button" disabled={loggingIn}>{loggingIn ? 'Memverifikasi...' : 'Masuk ke KABOBS Operational Hub'}</button>
       </form>
       <small>Akses khusus Area Manager dan Leader Outlet</small>
     </div>
@@ -158,7 +159,7 @@ export default function App() {
   return <div className="app-shell horizontal-shell">
     <header className="site-header">
       <div className="site-topbar">
-        <div className="side-brand"><span className="brand-mark small">K</span><span><strong>KABOBS OPS</strong><small>AREA BANDUNG 2</small></span></div>
+        <div className="side-brand"><img className="kabobs-header-logo" src={`${import.meta.env.BASE_URL}kabobs-logo.png`} alt="Logo Kabobs" /><span><strong>KABOBS Operational Hub</strong><small>AREA BANDUNG 2</small></span></div>
         <div className="top-actions"><span className="user-name">{profile.full_name} · {profile.role === 'AM' ? 'Area Manager' : name}</span><button className="secondary-button" onClick={logout}>Keluar</button></div>
       </div>
       <nav className="horizontal-nav" aria-label="Menu operasional">
