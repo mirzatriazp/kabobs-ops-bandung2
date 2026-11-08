@@ -1,0 +1,23 @@
+.visit-module{min-width:0}.visit-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.visit-head h3{margin:0 0 6px}.visit-head p{color:#8390a6;margin:0}.visit-buttons{display:flex;gap:8px;flex-wrap:wrap}.visit-module button,.visit-module select,.visit-module input,.visit-module textarea{font:inherit}.visit-module button{padding:10px 14px;border:1px solid #d7e0ed;background:#fff;border-radius:9px;cursor:pointer;color:#15223d;font-weight:600}.visit-module button.visit-primary{background:#f5c342;border-color:#f5c342;color:#111b32}.visit-module button:disabled{opacity:.48;cursor:not-allowed}.visit-module input,.visit-module select,.visit-module textarea{border:1px solid #d7e0ed;border-radius:8px;padding:9px;color:#14213b;background:#fff;max-width:100%;box-sizing:border-box}.visit-module textarea{resize:vertical;min-width:165px}.visit-form{margin:18px 0;padding:20px;background:#f8fafd;border:1px solid #e2e8f2;border-radius:14px}.visit-form h3{margin:0 0 16px}.visit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-bottom:16px}.visit-grid label{display:flex;flex-direction:column;gap:7px;font-weight:600;font-size:12px}.visit-grid .visit-wide{grid-column:1/-1}.visit-toolbar{display:flex;justify-content:space-between;align-items:center;margin:18px 0 12px;gap:10px;flex-wrap:wrap;color:#52617b}.visit-toolbar label{display:flex;gap:9px;align-items:center}.visit-scroll{overflow-x:auto;border-radius:12px;border:1px solid #e2e8f0}.visit-table{border-collapse:collapse;min-width:1450px;width:100%;font-size:12px}.visit-table thead{background:#13203b;color:#fff}.visit-table th{text-align:left;padding:14px 11px;white-space:nowrap}.visit-table td{padding:12px 11px;vertical-align:top;border-bottom:1px solid #e9edf3;color:#14213b;max-width:230px;overflow-wrap:anywhere}.visit-table tbody tr:nth-child(even){background:#f7f9fc}.visit-table .visit-long{min-width:160px}.visit-table input[type=file]{max-width:150px;font-size:11px}.visit-table a{color:#a56d02;text-decoration:underline}.visit-row-actions{display:grid;gap:7px;min-width:130px}.visit-status{display:inline-block;border-radius:7px;padding:5px 8px;background:#e9eff9;font-size:11px;font-weight:600;white-space:nowrap}.visit-status.status-done{background:#e3f7ea;color:#12723b}.visit-status.status-revision{background:#ffe9e8;color:#b01f24}.visit-status.status-submitted{background:#fff1cc;color:#805300}.visit-overdue{color:#c22028;font-weight:700}.visit-muted,.visit-footnote{font-size:11px;color:#8490a4}.visit-footnote{margin-top:13px}.visit-alert{padding:12px;margin:16px 0;border-radius:10px}.visit-error{background:#fff0f0;color:#a31922}.visit-success{background:#e6f7ee;color:#147444}.visit-empty{text-align:center;color:#7787a0;padding:40px 10px;border:1px dashed #d8e1ef;border-radius:12px}@media(max-width:700px){.visit-grid{grid-template-columns:1fr}.visit-head{flex-wrap:wrap}}
+
+/* V2 - Compact typography: match Defect & Maintenance table */
+.visit-module {font-size:12px; line-height:1.5;}
+.visit-module .visit-head h3 {font-size:14px; font-weight:700; line-height:1.4; margin:0 0 5px;}
+.visit-module .visit-head p {font-size:12px; line-height:1.6;}
+.visit-module .visit-toolbar {font-size:12px; margin:17px 0 12px;}
+.visit-module .visit-toolbar b {font-size:12px;}
+.visit-module .visit-toolbar label {font-size:12px;}
+.visit-module .visit-toolbar select {font-size:12px; padding:9px 11px; min-width:145px;}
+.visit-module button, .visit-module input, .visit-module select, .visit-module textarea {font-size:12px;}
+.visit-module button {padding:9px 12px;}
+.visit-module .visit-table {font-size:12px; line-height:1.5;}
+.visit-module .visit-table th {font-size:11px; padding:12px 10px;}
+.visit-module .visit-table td {font-size:12px; padding:11px 10px;}
+.visit-module .visit-form h3 {font-size:14px;}
+.visit-module .visit-status {font-size:11px;}
+.visit-module .visit-footnote {font-size:11px;}
+/* Photo thumbnail and full-size click-through (finding & correction) */
+.visit-module .visit-photo-link {display:inline-flex; flex-direction:column; align-items:flex-start; gap:4px; color:#a46a00; font-size:11px; text-decoration:underline; max-width:90px;}
+.visit-module .visit-photo-thumb {display:block; width:78px; height:58px; object-fit:cover; border-radius:7px; border:1px solid #e0e6ef; background:#f4f6f9;}
+.visit-module .visit-photo-link:hover .visit-photo-thumb {opacity:.88;}
+.visit-module .visit-photo-link:focus-visible {outline:2px solid #b68721; outline-offset:3px; border-radius:4px;}

@@ -4,9 +4,11 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import SalesReport from './components/SalesReport'
 import DashboardSales from './components/DashboardSales'
+import Maintenance from './components/Maintenance'
 import { CalendarActivity, GeneralInformation } from './components/CalendarActivity'
 import './App.css'
-
+import VisitAM from './components/VisitAM'
+import './components/VisitAM.css'
 type Profile = {
   id: string
   nik: string
@@ -172,7 +174,24 @@ export default function App() {
             <CalendarActivity role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} compact />
           </div>
           <section className="panel"><h3>Master Outlet</h3><p className="muted">Data outlet dibaca dari Supabase sesuai akses.</p><div className="outlet-grid">{outlets.filter(o => profile.role === 'AM' && !selectedOutlet ? true : o.id === (profile.role === 'AM' ? selectedOutlet : profile.outlet_id)).map(o => <div className="outlet-item" key={o.id}><span className="outlet-icon">⌂</span>{o.outlet_name}</div>)}</div></section>
-        </> : activePage === 'Calendar Activity' ? <CalendarActivity role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'General Information' ? <GeneralInformation role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'Sales Report' ? <SalesReport role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : <section className="panel"><div className="feature-icon">✦</div><h2>{activePage}</h2><p>{modules.find(m => m[0] === activePage)?.[1]}</p><div className="notice">Modul ini belum diimplementasikan. Sales Report kini sudah tersedia.</div></section>}
+        </> : activePage === 'Calendar Activity' ? <CalendarActivity role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'General Information' ? <GeneralInformation role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'Sales Report' ? <SalesReport role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'Defect & Maintenance' ? <Maintenance role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} />
+: activePage === 'Report Visit AM'
+  ? <VisitAM
+      role={profile.role}
+      outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+      outlets={outlets}
+      month={month}
+      year={year}
+    />
+: <section className="panel">
+    <div className="feature-icon">✦</div>
+    <h2>{activePage}</h2>
+    <p>{modules.find(m => m[0] === activePage)?.[1]}</p>
+    <div className="notice">
+      Modul ini belum diimplementasikan. Sales Report kini sudah tersedia.
+    </div>
+  </section>
+}
       </main>
     </div>
   </div>
