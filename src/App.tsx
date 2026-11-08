@@ -10,6 +10,8 @@ import './App.css'
 import VisitAM from './components/VisitAM'
 import './components/VisitAM.css'
 import PIQPerformance from './components/PIQPerformance'
+import ProfileOutlet from './components/ProfileOutlet'
+import DataTeam from './components/DataTeam'
 type Profile = {
   id: string
   nik: string
@@ -160,7 +162,17 @@ export default function App() {
         <div className="content-head"><div><div className="eyebrow">KABOBS · AREA BANDUNG 2</div><h1>{activePage}</h1><p className="muted">{profile.role === 'AM' ? 'Area Manager · 8 Outlet' : `Leader · ${name}`}</p></div>
           <div className="filters">
             {profile.role === 'AM' && <select aria-label="Outlet" value={selectedOutlet} onChange={e => setSelectedOutlet(e.target.value)}><option value="">Semua Outlet</option>{outlets.map(o => <option key={o.id} value={o.id}>{o.outlet_name}</option>)}</select>}
-            <select aria-label="Bulan" value={month} onChange={e => setMonth(Number(e.target.value))}>{Array.from({ length: 12 }, (_, i) => <option value={i + 1} key={i}>{new Intl.DateTimeFormat('id-ID',{month:'long'}).format(new Date(2026,i,1))}</option>)}</select>
+  <select
+    aria-label="Bulan"
+    value={month}
+    onChange={e => setMonth(Number(e.target.value))}
+  >
+    {Array.from({ length: 12 }, (_, i) => (
+      <option value={i + 1} key={i}>
+        {new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2026, i, 1))}
+      </option>
+    ))}
+  </select>
             <select aria-label="Tahun" value={year} onChange={e => setYear(Number(e.target.value))}>{Array.from({length: 8}, (_,i)=>2024+i).map(y => <option key={y}>{y}</option>)}</select>
           </div>
         </div>
@@ -175,7 +187,14 @@ export default function App() {
             <CalendarActivity role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} compact />
           </div>
           <section className="panel"><h3>Master Outlet</h3><p className="muted">Data outlet dibaca dari Supabase sesuai akses.</p><div className="outlet-grid">{outlets.filter(o => profile.role === 'AM' && !selectedOutlet ? true : o.id === (profile.role === 'AM' ? selectedOutlet : profile.outlet_id)).map(o => <div className="outlet-item" key={o.id}><span className="outlet-icon">⌂</span>{o.outlet_name}</div>)}</div></section>
-        </> : activePage === 'Calendar Activity' ? <CalendarActivity role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'General Information' ? <GeneralInformation role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'Sales Report' ? <SalesReport role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'Defect & Maintenance' ? <Maintenance role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} />
+          </>
+: activePage === 'Profile Outlet'
+  ? <ProfileOutlet
+      role={profile.role}
+      outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+      outlets={outlets}
+    />
+        : activePage === 'Calendar Activity' ? <CalendarActivity role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'General Information' ? <GeneralInformation role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'Sales Report' ? <SalesReport role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'Defect & Maintenance' ? <Maintenance role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} />
 : activePage === 'Report Visit AM'
   ? <VisitAM
       role={profile.role}
@@ -191,6 +210,12 @@ export default function App() {
       outlets={outlets}
       month={month}
       year={year}
+    />
+    : activePage === 'Data Team'
+  ? <DataTeam
+      role={profile.role}
+      outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+      outlets={outlets}
     />
 : <section className="panel">
     <div className="feature-icon">✦</div>

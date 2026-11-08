@@ -50,3 +50,12 @@
 .piq-kpis small { color:#8a96aa; font-size:10px; line-height:1.5; }
 .piq-kpis strong { overflow-wrap:anywhere; }
 .piq-grade { white-space:nowrap; }
+
+/* PIQ annual view - scoped */
+.piq-outlet-filter {display:flex;align-items:center;gap:10px;margin:2px 0 12px;font-size:12px;font-weight:650;color:#344560;}
+.piq-outlet-filter select {max-width:280px;min-width:175px;padding:9px;border:1px solid #dce3ee;border-radius:8px;background:#fff;color:#14213d;}
+.piq-month {min-width:100px;}
+.piq-unfilled {color:#a0acbf;}
+.piq-reward-yes,.piq-reward-no {display:inline-block;padding:5px 8px;border-radius:6px;font-weight:750;white-space:nowrap;}
+.piq-reward-yes {background:#dcf7e9;color:#137645;}
+.piq-reward-no {background:#fff2ca;color:#8f5b00;}
