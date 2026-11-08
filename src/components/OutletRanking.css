@@ -1,0 +1,56 @@
+.okr-root{box-sizing:border-box;background:#fff;border:1px solid #dce4f1;border-radius:17px;padding:22px;color:#142241;font-size:12px}
+.okr-root *{box-sizing:border-box}
+.okr-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.okr-header h3{text-align:center;margin:0 0 6px;font-size:15px;color:#142241;font-weight:800}
+.okr-header p{margin:0;color:#8394b0}
+.okr-root button,.okr-root input{font:inherit}
+.okr-root button{cursor:pointer;border:1px solid #d5e0ef;border-radius:9px;background:white;color:#192948;font-weight:700;padding:11px 14px}
+.okr-root button:disabled{opacity:.55;cursor:not-allowed}
+.okr-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:20px 0 14px}
+.okr-tabs button.active,.okr-root button.okr-primary{background:#f7c342;border-color:#f7c342;color:#142241}
+.okr-toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:4px 0 14px}
+.okr-toolbar>div>strong{font-size:14px}.okr-toolbar p{color:#8394b0;font-size:11px;margin:5px 0 0}
+.okr-table-wrap{overflow-x:auto;border:1px solid #dce4f1;border-radius:12px}
+.okr-table{width:100%;border-collapse:collapse;min-width:380px}
+.okr-table th{background:#152242;color:#fff;text-align:left;padding:15px 18px;font-weight:800}
+.okr-table td{padding:14px 18px;border-bottom:1px solid #dce4f1;vertical-align:middle}
+.okr-table tbody tr:nth-child(even){background:#f4f7fb}.okr-table tbody tr:last-child td{border-bottom:0}
+.okr-rank{display:inline-flex;border-radius:7px;min-width:28px;justify-content:center;padding:6px;background:#ecf0f5;font-weight:800}
+.okr-rank.top{background:#ffefbf;color:#6e4d05}.okr-value{font-weight:800;font-size:13px;white-space:nowrap}
+.okr-empty{text-align:center;color:#8394b0;padding:30px!important}
+.okr-error,.okr-success{padding:10px 13px;border-radius:9px;margin-bottom:12px}.okr-error{background:#fff0f0;color:#a42c2c}.okr-success{background:#ebf8ee;color:#14793c}
+.okr-form{background:#f4f7fc;border:1px solid #dbe4f2;border-radius:12px;padding:16px;margin-bottom:14px}
+.okr-form>strong{font-size:13px}.okr-form p{color:#8394b0;font-size:11px;line-height:1.6}
+.okr-entry-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+.okr-entry-list label{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border:1px solid #dce4f1;border-radius:9px;background:#fff;font-weight:700}
+.okr-entry-list label>span{flex:1}.okr-input-group{display:flex;align-items:center;gap:6px;color:#74849b}
+.okr-input-group input{min-width:0;width:115px;padding:8px;border:1px solid #d5e0ef;border-radius:7px;background:white;color:#142241;text-align:right}
+.okr-input-group input:focus{outline:2px solid #f7c342}
+@media(max-width:740px){.okr-root{padding:13px}.okr-header h3{text-align:left}.okr-toolbar{align-items:flex-start;flex-direction:column}.okr-entry-list{grid-template-columns:1fr}.okr-table th,.okr-table td{padding:12px 9px}.okr-value{font-size:12px}}
+/* Notes General berlaku untuk semua kategori ranking pada bulan/tahun yang sama. */
+.okr-general-note{margin:17px 0 2px;padding:14px 17px;background:#fff8e6;border:1px solid #f1d995;border-radius:12px}
+.okr-general-note-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.okr-general-note-heading strong{font-size:13px;color:#44330a}
+.okr-general-note-heading button{padding:7px 12px;background:#fffdf7;border:1px solid #e7cc88}
+.okr-note-text{margin:8px 0 0;white-space:pre-wrap;font-size:13px;line-height:1.55;color:#3e4149;font-weight:600}
+.okr-note-editor textarea{display:block;box-sizing:border-box;width:100%;resize:vertical;min-height:75px;padding:10px 12px;margin:10px 0;font:inherit;line-height:1.55;border:1px solid #cbd7e7;border-radius:8px;color:#142241}
+.okr-note-actions{display:flex;gap:8px;justify-content:flex-end}
+.okr-not-entered{color:#8b99af}
+.okr-not-entered td:last-child{font-style:italic}
+.okr-general-note{margin:17px 0 2px;padding:14px 17px;background:#fff8e6;border:1px solid #f1d995;border-radius:12px}
+.okr-general-note-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.okr-general-note-heading strong{font-size:13px;color:#44330a}
+.okr-general-note-heading button{padding:7px 12px;background:#fffdf7;border:1px solid #e7cc88}
+.okr-note-text{margin:8px 0 0;white-space:pre-wrap;font-size:13px;line-height:1.55;color:#3e4149;font-weight:600}
+.okr-note-editor textarea{display:block;box-sizing:border-box;width:100%;resize:vertical;min-height:75px;padding:10px 12px;margin:10px 0;font:inherit;line-height:1.55;border:1px solid #cbd7e7;border-radius:8px;color:#142241}
+.okr-note-actions{display:flex;gap:8px;justify-content:flex-end}
+.okr-not-entered{color:#8b99af}
+.okr-not-entered td:last-child{font-style:italic}
+
+/* v2.3: tampilkan hanya isi Notes General, besar dan tebal. */
+.okr-general-note{position:relative;padding:19px 20px;margin:17px 0 4px;text-align:center}
+.okr-general-note-heading{justify-content:flex-end;min-height:0}
+.okr-general-note-heading:empty{display:none}
+.okr-note-text{font-size:17px;font-weight:800;color:#172443;line-height:1.5;margin:0;white-space:pre-wrap;text-align:center}
+.okr-note-editor{text-align:left}
+@media(max-width:740px){.okr-note-text{font-size:15px}.okr-general-note{padding:15px}}

@@ -15,6 +15,7 @@ import DataTeam from './components/DataTeam'
 import Schedule from './components/Schedule'
 import TeamOnDutyDashboard from './components/TeamOnDutyDashboard'
 import InventoryDSO from './components/InventoryDSO'
+import OutletRanking from './components/OutletRanking'
 type Profile = {
   id: string
   nik: string
@@ -234,6 +235,14 @@ export default function App() {
     />
     : activePage === 'Inventory & DSO'
   ? <InventoryDSO
+      role={profile.role}
+      outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+      outlets={outlets}
+      month={month}
+      year={year}
+    />
+    : activePage === 'Peringkat Outlet'
+  ? <OutletRanking
       role={profile.role}
       outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
       outlets={outlets}
