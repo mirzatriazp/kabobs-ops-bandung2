@@ -16,6 +16,7 @@ import Schedule from './components/Schedule'
 import TeamOnDutyDashboard from './components/TeamOnDutyDashboard'
 import InventoryDSO from './components/InventoryDSO'
 import OutletRanking from './components/OutletRanking'
+import TemplateBA from './components/TemplateBA'
 type Profile = {
   id: string
   nik: string
@@ -249,6 +250,8 @@ export default function App() {
       month={month}
       year={year}
     />
+    : activePage === 'Template BA'
+  ? <TemplateBA role={profile.role} />
 : <section className="panel">
     <div className="feature-icon">✦</div>
     <h2>{activePage}</h2>
