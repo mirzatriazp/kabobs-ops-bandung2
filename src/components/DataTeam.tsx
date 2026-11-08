@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
+import { downloadXlsx, type ExcelCell, type ExcelSheet } from '../lib/exportXlsx'
 import './DataTeam.css'
 
 type Outlet = { id: string; outlet_code: string; outlet_name: string }
@@ -123,6 +124,18 @@ export default function DataTeam({ role, outletId, outlets }: Props) {
       .sort(([a], [b]) => (groupRank.get(a) ?? 999) - (groupRank.get(b) ?? 999))
       .flatMap(([, crew]) => orderCrew(crew))
   }, [members, role, outletId, outletFilter, statusFilter, search, nameById, orderedOutlets])
+  const exportExcel = () => {
+    if(role!=='AM'||loading||error)return
+    const header=['Outlet','Nama Crew','NIK','Jabatan','Join Date','Masa Kerja','Status','Total Baju','Chef (Pcs)','Ukuran Chef','Polo (Pcs)','Ukuran Polo','Apron','Name Tag','Topi','Catatan AM']
+    const memberRow=(m:Member):ExcelCell[]=>[nameById.get(m.outlet_id)||'—',m.full_name,m.nik,m.job_title,m.joined_at||'',tenure(m.joined_at),m.employment_status,uniformTotal(m),m.chef_uniform_qty??0,m.chef_uniform_size||'',m.polo_uniform_qty??0,m.polo_uniform_size||'',m.apron,m.name_tag,m.headwear,m.notes||'']
+    const sheets:ExcelSheet[]=[{name:'Rekap Semua Outlet',rows:[header,...visible.map(memberRow)]}]
+    for(const outlet of orderedOutlets){
+      const crew=visible.filter(m=>m.outlet_id===outlet.id)
+      if(crew.length)sheets.push({name:outlet.outlet_name,rows:[header,...crew.map(memberRow)]})
+    }
+    downloadXlsx(`KABOBS_OPS_Data_Team_${new Date().toISOString().slice(0,10)}.xlsx`,sheets)
+  }
+
   const reorderOutlets = async (at: number, step: number) => {
     if (role !== 'AM' || sortSaving) return
     const copy = [...orderedOutlets], destination = at + step
@@ -197,7 +210,7 @@ export default function DataTeam({ role, outletId, outlets }: Props) {
     setEditorOpen(false); setEditingId(null); await load()
   }
   return <section className="dt-root">
-    <div className="dt-head"><div><h3>Data Team — Area Bandung 2</h3><p>Data crew, masa kerja, jumlah seragam, dan kelengkapan atribut per outlet.</p></div><div className="dt-actions"><button type="button" className="dt-btn dt-secondary" onClick={() => void load()}>↻ Refresh</button>{role === 'AM' && <><button type="button" className="dt-btn dt-primary" onClick={beginCreate}>+ Tambah crew</button><button type="button" className="dt-btn dt-secondary" onClick={() => { setSortOpen(o => !o); setSortOutletId(current => current || orderedOutlets[0]?.id || '') }}>{sortOpen ? 'Tutup Urutan' : '⚙ Atur Urutan'}</button></>}</div></div>
+    <div className="dt-head"><div><h3>Data Team — Area Bandung 2</h3><p>Data crew, masa kerja, jumlah seragam, dan kelengkapan atribut per outlet.</p></div><div className="dt-actions"><button type="button" className="dt-btn dt-secondary" onClick={() => void load()}>↻ Refresh</button>{role === 'AM' && <button type="button" className="dt-btn dt-secondary" disabled={loading||!!error} onClick={exportExcel}>⬇ Download Excel</button>}{role === 'AM' && <><button type="button" className="dt-btn dt-primary" onClick={beginCreate}>+ Tambah crew</button><button type="button" className="dt-btn dt-secondary" onClick={() => { setSortOpen(o => !o); setSortOutletId(current => current || orderedOutlets[0]?.id || '') }}>{sortOpen ? 'Tutup Urutan' : '⚙ Atur Urutan'}</button></>}</div></div>
     {message && <div className="dt-msg dt-ok" role="status">{message}</div>}
     {error && <div className="dt-msg dt-error" role="alert">{error}</div>}
     {role === 'AM' && sortOpen && <div className="dt-sort-panel">

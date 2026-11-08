@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
+import './DashboardSalesFinal.css'
 import { supabase } from '../lib/supabase'
 
 type Outlet = { id: string; outlet_name: string; outlet_code: string }
-type Props = { role: 'AM' | 'LEADER'; outletId: string; outlets: Outlet[]; month: number; year: number }
+type Props = { role: 'AM' | 'LEADER'; outletId: string; outlets: Outlet[]; month: number; year: number; teamOnDuty?: ReactNode }
 type ValueRow = { outlet_id: string; sales_date: string; target_amount?: number; actual_amount?: number }
 
 type Snapshot = {
@@ -34,7 +36,7 @@ function snapshot(year:number, month:number, cutoffDay:number, outletCount:numbe
   return {label:monthLabel(year,month),actual,target,actualDays:actualByDate.size,targetDays:targetByDate.size,matchedDays,matchedActual,matchedTarget,totalDays:days*outletCount}
 }
 
-export default function DashboardSales({role,outletId,outlets,month,year}:Props) {
+export default function DashboardSales({role,outletId,outlets,month,year,teamOnDuty}:Props) {
   const [actuals,setActuals]=useState<ValueRow[]>([])
   const [targets,setTargets]=useState<ValueRow[]>([])
   const [loading,setLoading]=useState(true)
@@ -82,48 +84,63 @@ export default function DashboardSales({role,outletId,outlets,month,year}:Props)
     const today=jakartaToday()
     const first=key(year,month,1)
     const end=key(year,month,new Date(year,month,0).getDate())
-    const cutoff=today<first?0:today>end?new Date(year,month,0).getDate():Number(today.slice(-2))
-    if(cutoff===0)return null
+    // Periode mendatang tetap menampilkan kartu; bila belum ada data, nilainya 0 / —.
+    const isFuture=today<first
+    const cutoff=isFuture||today>end?new Date(year,month,0).getDate():Number(today.slice(-2))
     return {
       current:snapshot(year,month,cutoff,outletCount,actuals,targets),
       previous:snapshot(previousMonthYear,previousMonth,cutoff,outletCount,actuals,targets),
       lastYear:snapshot(year-1,month,cutoff,outletCount,actuals,targets),
       cutoff,
+      isFuture,
     }
   },[actuals,targets,year,month,outletCount,previousMonthYear,previousMonth])
 
   if(loading)return <section className="panel"><h3>Sales Performance</h3><p className="muted">Memuat data Sales...</p></section>
   if(error)return <section className="panel"><h3>Sales Performance</h3><p className="sales-alert error">{error}</p><button className="sales-button" onClick={()=>setRefresh(x=>x+1)}>Coba lagi</button></section>
-  if(!data)return <section className="panel"><h3>Sales Performance</h3><p className="muted">Periode yang dipilih belum berjalan. Belum ada MTD.</p></section>
 
-  const {current,previous,lastYear,cutoff}=data
-  const complete=current.totalDays>0&&current.actualDays===current.totalDays&&current.targetDays===current.totalDays
-  const comparable=current.actualDays>0&&current.targetDays>0
+  const {current,previous,lastYear}=data
+  // Periode berjalan/lampau mempertahankan rumus lama.
+  // Periode mendatang menampilkan target yang sudah diinput walau actual belum ada.
+  const comparable=data.isFuture?current.targetDays>0:(current.actualDays>0&&current.targetDays>0)
   const achievement=comparable&&current.target>0?(current.actual/current.target*100):null
   const gap=comparable?current.actual-current.target:null
-  const tile=(label:string,value:string,description:string,negative=false)=> <div className="stat-card" key={label}><div className="stat-title">{label}</div><div className="stat-empty" style={{color:negative?'#c73333':'#142039'}}>{value}</div><div className="stat-foot">{description}</div></div>
+  const monthlyTarget=targets
+    .filter(x=>x.sales_date>=key(year,month,1)&&x.sales_date<=key(year,month,new Date(year,month,0).getDate()))
+    .reduce((sum,x)=>sum+Number(x.target_amount||0),0)
+  const monthlyTargetCount=targets.filter(x=>x.sales_date>=key(year,month,1)&&x.sales_date<=key(year,month,new Date(year,month,0).getDate())).length
+  const expectedMonthlyDays=new Date(year,month,0).getDate()*outletCount
+  const compareData=[
+    {title:'MTD Bulan Dipilih',value:current.actual},
+    {title:`Last Month · ${previous.label}`,value:previous.actual},
+    {title:`Last Year · ${lastYear.label}`,value:lastYear.actual},
+  ]
+  const differenceData=[
+    {title:'Selisih MTD vs Target',value:monthlyTargetCount?current.actual-monthlyTarget:null,description:monthlyTargetCount<expectedMonthlyDays?'Target bulanan belum lengkap':''},
+    {title:'Selisih vs Last Month',value:current.actualDays&&previous.actualDays?current.actual-previous.actual:null,description:''},
+    {title:'Selisih vs Last Year',value:current.actualDays&&lastYear.actualDays?current.actual-lastYear.actual:null,description:''},
+  ]
+  const diffText=(v:number|null)=>v===null?'—':`${v>0?'+':v<0?'−':''}${fmt(Math.abs(v))}`
+  const tile=(label:string,value:string,note:string,negative=false)=> <div className="stat-card dashboard-kpi-card" key={label}><div className="stat-title">{label}</div><div className="stat-empty" style={{color:negative?'#c73333':'#142039'}}>{value}</div><div className="dashboard-kpi-note">{note}</div></div>
   return <>
     <div className="stats">
-      {tile('Sales MTD (Terinput)',fmt(current.actual),`${current.actualDays}/${current.totalDays} hari-outlet terisi · ${current.label}`)}
-      {tile('Target To-Date (Terinput)',fmt(current.target),`${current.targetDays}/${current.totalDays} hari-outlet target terisi`)}
-      {tile('Selisih Actual MTD vs Target MTD',gap===null?'—':fmt(gap),complete?'Periode lengkap':'SEMENTARA · Actual MTD − Target MTD',gap!==null&&gap<0)}
-      {tile('Achievement MTD',achievement===null?'—':achievement.toFixed(2)+'%',complete?'Periode sudah lengkap':'SEMENTARA · Actual MTD ÷ Target MTD')}
+      {tile('Sales MTD',fmt(current.actual),'Pencapaian sales')}
+      {tile('Target Sales',fmt(current.target),`Target Sales ${monthLabel(year,month)}`)}
+      {tile('Selisih Actual vs Target',gap===null?'—':fmt(gap),'Selisih pencapaian Sales vs Target',gap!==null&&gap<0)}
+      {tile('Achievement MTD',achievement===null?'—':achievement.toFixed(2)+'%','Persentase Pencapaian Sales')}
     </div>
-    <div className="dashboard-grid">
-      <section className="panel">
+    <div className="dashboard-grid dashboard-sales-team-grid">
+      <section className="panel dashboard-sales-compare-panel">
         <h3>Perbandingan Sales</h3>
-        <p className="muted">Dibandingkan sampai tanggal {cutoff} pada masing-masing bulan (jika tanggal tersedia).</p>
-        <div className="sales-compare"><div><span>Bulan dipilih</span><strong>{fmt(current.actual)}</strong><small>{current.actualDays} hari-outlet terisi</small></div><div><span>Bulan lalu · {previous.label}</span><strong>{fmt(previous.actual)}</strong><small>{previous.actualDays} hari-outlet terisi</small></div><div><span>Tahun lalu · {lastYear.label}</span><strong>{fmt(lastYear.actual)}</strong><small>{lastYear.actualDays} hari-outlet terisi</small></div></div>
-        <p className="muted">Angka perbandingan adalah jumlah data yang sudah masuk, bukan pertumbuhan final bila historinya belum lengkap.</p>
+        <p className="muted">Perbandingan MTD vs Last Month vs Last Year</p>
+        <div className="sales-compare">
+          {compareData.map(x=><div key={x.title}><span>{x.title}</span><strong>{fmt(x.value)}</strong></div>)}
+        </div>
+        <div className="sales-diff-compare">
+          {differenceData.map(x=><div key={x.title} className="sales-diff-box"><span>{x.title}</span><strong className={x.value===null?'is-empty':x.value<0?'is-negative':x.value>0?'is-positive':'is-neutral'}>{diffText(x.value)}</strong>{x.description&&<small>{x.description}</small>}</div>)}
+        </div>
       </section>
-      <section className="panel">
-        <h3>Status Kelengkapan Sales</h3>
-        <p className="muted">Periode {current.label}, sampai tanggal {cutoff}. {isAll?'Akumulasi 8 outlet.':'Outlet terpilih.'}</p>
-        <p><strong>Actual:</strong> {current.actualDays} / {current.totalDays} hari-outlet</p>
-        <p><strong>Target:</strong> {current.targetDays} / {current.totalDays} hari-outlet</p>
-        <p><strong>Data cocok:</strong> {current.matchedDays} / {current.totalDays} hari-outlet</p>
-        <div className="notice">{complete?'Data target dan actual periode cutoff lengkap.':'Angka Sales dan achievement masih bersifat sementara karena belum semua tanggal terisi.'}</div>
-      </section>
+      {teamOnDuty ? <div className="dashboard-tod-slot">{teamOnDuty}</div> : null}
     </div>
   </>
 }

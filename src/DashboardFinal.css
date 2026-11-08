@@ -1,0 +1,23 @@
+/* KABOBS OPS Dashboard v5: banner dan kalender */
+.horizontal-shell .hero {text-align:center!important}
+.horizontal-shell .hero h2 {text-align:center!important}
+.horizontal-shell .hero .dashboard-hero-description {
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  text-align:center!important;
+  margin:12px auto!important;
+  padding:0!important;
+  box-sizing:border-box;
+}
+.horizontal-shell .dashboard-grid.dashboard-info-grid {
+  display:grid;
+  grid-template-columns:minmax(0, 0.72fr) minmax(0, 1.28fr);
+  gap:16px;
+  align-items:stretch;
+}
+.horizontal-shell .dashboard-grid.dashboard-info-grid > * {width:100%;min-width:0;box-sizing:border-box}
+.horizontal-shell .dashboard-info-grid .ops-calendar-cell {min-height:72px}
+@media(max-width:780px) {
+  .horizontal-shell .dashboard-grid.dashboard-info-grid {grid-template-columns:minmax(0,1fr)}
+}

@@ -18,6 +18,8 @@ import InventoryDSO from './components/InventoryDSO'
 import OutletRanking from './components/OutletRanking'
 import TemplateBA from './components/TemplateBA'
 import LiveChat from './components/LiveChat'
+import OperationalOverview from './components/OperationalOverview'
+import './DashboardFinal.css'
 type Profile = {
   id: string
   nik: string
@@ -29,20 +31,20 @@ type Profile = {
 type Outlet = { id: string; outlet_code: string; outlet_name: string }
 
 const modules = [
-  ['Dashboard','Ringkasan dan informasi outlet'],
-  ['Profile Outlet','Foto, alamat dan detail store'],
-  ['Calendar Activity','Agenda dan deadline operasional'],
-  ['General Information','Pengumuman dan informasi dari AM'],
-  ['Sales Report','Input actual sales dan perhitungan MTD'],
-  ['Defect & Maintenance','Pengajuan service order'],
-  ['Report Visit AM','Temuan dan corrective action'],
-  ['PIQ Performance','Hasil audit internal'],
-  ['Data Team','Crew dan atribut kerja'],
-  ['Schedule','Perencanaan dan validasi jadwal'],
-  ['Inventory & DSO','Review DSO dan selisih bulanan'],
-  ['Peringkat Outlet','Ranking area Bandung 2'],
-  ['Template BA','Download dokumen'],
-  ['Live Chat','Komunikasi antaroutlet'],
+  ['Dashboard', 'Ringkasan dan informasi outlet'],
+  ['Profile Outlet', 'Foto, alamat dan detail store'],
+  ['Calendar Activity', 'Agenda dan deadline operasional'],
+  ['General Information', 'Pengumuman dan informasi dari AM'],
+  ['Sales Report', 'Input actual sales dan perhitungan MTD'],
+  ['Inventory & DSO', 'Review DSO dan selisih bulanan'],
+  ['Report Visit AM', 'Temuan dan corrective action'],
+  ['Defect & Maintenance', 'Pengajuan service order'],
+  ['Data Team', 'Crew dan atribut kerja'],
+  ['Schedule', 'Perencanaan dan validasi jadwal'],
+  ['PIQ Performance', 'Hasil audit internal'],
+  ['Peringkat Outlet', 'Ranking area Bandung 2'],
+  ['Template BA', 'Download dokumen'],
+  ['Live Chat', 'Komunikasi antaroutlet'],
 ]
 
 function greeting() {
@@ -183,20 +185,31 @@ export default function App() {
           </div>
         </div>
         {activePage === 'Dashboard' ? <>
-          <section className="hero"><div className="eyebrow light">LIVE OPERATIONS · AREA BANDUNG 2</div><h2>{greeting()}, {name}!</h2><p>Pantau performa, aktivitas tim, agenda, dan tindak lanjut operasional dalam satu sistem.</p><span className="hero-note">Database: Terhubung · Role: {profile.role}</span></section>
-          <DashboardSales role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /><TeamOnDutyDashboard
-  role={profile.role}
-  outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
-  outlets={outlets}
-/>
-          <div className="stats stats-secondary">
-            {['Nilai PIQ'].map(title => <div className="stat-card" key={title}><div className="stat-title">{title}</div><div className="stat-empty">Belum ada data</div><div className="stat-foot">Menunggu integrasi modul terkait</div></div>)}
-          </div>
-          <div className="dashboard-grid">
+          <section className="hero"><div className="eyebrow light">LIVE OPERATIONS · AREA BANDUNG 2</div><h2>{greeting()}, {name}!</h2><p className="dashboard-hero-description" style={{ textAlign: 'center', marginInline: 'auto' }}>Pantau performa, aktivitas tim, agenda, dan tindak lanjut operasional dalam satu sistem.</p><span className="hero-note">Database: Terhubung · Role: {profile.role}</span></section>
+          {/* Ringkasan Operasional diletakkan paling atas agar langsung terlihat. */}
+          <OperationalOverview
+            role={profile.role}
+            outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+            outlets={outlets}
+            month={month}
+            year={year}
+          />
+          <DashboardSales
+            role={profile.role}
+            outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+            outlets={outlets}
+            month={month}
+            year={year}
+            teamOnDuty={<TeamOnDutyDashboard
+              role={profile.role}
+              outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+              outlets={outlets}
+            />}
+          />
+          <div className="dashboard-grid dashboard-info-grid">
             <GeneralInformation role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} compact />
             <CalendarActivity role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} compact />
           </div>
-          <section className="panel"><h3>Master Outlet</h3><p className="muted">Data outlet dibaca dari Supabase sesuai akses.</p><div className="outlet-grid">{outlets.filter(o => profile.role === 'AM' && !selectedOutlet ? true : o.id === (profile.role === 'AM' ? selectedOutlet : profile.outlet_id)).map(o => <div className="outlet-item" key={o.id}><span className="outlet-icon">⌂</span>{o.outlet_name}</div>)}</div></section>
           </>
 : activePage === 'Profile Outlet'
   ? <ProfileOutlet

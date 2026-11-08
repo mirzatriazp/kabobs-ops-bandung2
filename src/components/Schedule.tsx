@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { downloadXlsx, type ExcelCell, type ExcelSheet } from '../lib/exportXlsx'
 import './Schedule.css'
 
 type Outlet = { id: string; outlet_code: string; outlet_name: string }
@@ -120,11 +121,32 @@ export default function Schedule({role,outletId,outlets,month,year}: Props) {
    else{setSuccess('Akses edit dibuka. Leader dapat revisi dan mengajukan kembali untuk approval AM.');await load()}
    setBusy(false)
  }
+ const exportExcel=()=>{
+   if(role!=='AM'||loading||error)return
+   const scope=activeOutlet?outlets.filter(o=>o.id===activeOutlet):outlets
+   const approved=scope.map(o=>({outlet:o,period:periods.find(p=>p.outlet_id===o.id)})).filter((item):item is {outlet:Outlet;period:Period}=>item.period?.status==='approved')
+   if(!approved.length){setError('Belum ada Schedule Approved AM pada outlet/periode yang dipilih.');return}
+   const overview:(string|number|null)[][]=[['Outlet','Periode','Status','Jumlah Crew','Updated At']]
+   const sheets:ExcelSheet[]=[]
+   for(const item of approved){
+     const list=entries.filter(e=>e.period_id===item.period.id).sort((a,b)=>a.display_order-b.display_order)
+     overview.push([item.outlet.outlet_name,`${month}/${year}`,'Approved AM',list.length,item.period.updated_at])
+     const header:ExcelCell[]=['Nama Crew','NIK',...dates.map(d=>d.iso),'Opening','Middle','Closing','Total Kerja','Jumlah OFF (termasuk GHK)','GHK','Cuti Tahunan','Cuti Spesial']
+     const matrix:ExcelCell[][]=[header]
+     for(const e of list){
+       const row:Row={key:e.id,nik:e.crew_nik,name:e.crew_name,codes:e.work_codes||{}}
+       const st=summary(row)
+       matrix.push([row.name,row.nik,...dates.map(d=>row.codes[d.iso]||''),st.opening,st.middle,st.closing,st.work,st.off,st.ghk,st.annual,st.special])
+     }
+     sheets.push({name:item.outlet.outlet_name,rows:matrix})
+   }
+   downloadXlsx(`KABOBS_OPS_Schedule_Approved_${year}_${String(month).padStart(2,'0')}.xlsx`,[{name:'Rekap Approval',rows:overview},...sheets])
+ }
  const today=iso(new Date())
  const onDuty=rows.filter(r=>{const c=r.codes[today];return c&&['O8','O9','M10','M11','M12','M13','C14','C15'].includes(c)})
  const isApproved=period?.status==='approved'
  return <section className="sch2">
-   <div className="sch2-header"><div><h2>Schedule</h2><p>Planning tim langsung di website • siklus 26–25</p></div><span className="sch2-period">26 {MONTHS[(month+10)%12]} {month===1?year-1:year} – 25 {MONTHS[month-1]} {year}</span></div>
+   <div className="sch2-header"><div><h2>Schedule</h2><p>Planning tim langsung di website • siklus 26–25</p></div>{role==='AM'&&<button type="button" disabled={loading||!!error} onClick={exportExcel} style={{padding:'10px 14px',borderRadius:10,border:'1px solid #d7e0ed',background:'#fff',color:'#142039',fontWeight:700,cursor:'pointer'}}>⬇ Download Excel (Approved)</button>}<span className="sch2-period">26 {MONTHS[(month+10)%12]} {month===1?year-1:year} – 25 {MONTHS[month-1]} {year}</span></div>
    {role==='AM'&&<div className="sch2-toolbar"><label>Pilih outlet <select value={activeOutlet} onChange={e=>setSelectedOutlet(e.target.value)}><option value="">Semua outlet — rekap approval</option>{outlets.map(o=><option key={o.id} value={o.id}>{o.outlet_name}</option>)}</select></label></div>}
    {role==='AM'&&!activeOutlet&&<div className="sch2-overview"><h3>Status Schedule — {MONTHS[month-1]} {year}</h3><div className="sch2-tablewrap"><table className="sch2-table"><thead><tr><th>Outlet</th><th>Status</th><th>Jumlah crew</th><th>Update terakhir</th><th>Aksi</th></tr></thead><tbody>{outlets.map(o=>{const p=periods.find(x=>x.outlet_id===o.id);return <tr key={o.id}><td>{o.outlet_name}</td><td>{p?STATUSES[p.status]:'Belum dibuat'}</td><td>{entries.filter(e=>e.period_id===p?.id).length}</td><td>{p?.updated_at?new Date(p.updated_at).toLocaleString('id-ID'):'—'}</td><td><button type="button" onClick={()=>setSelectedOutlet(o.id)}>Lihat Jadwal</button></td></tr>})}</tbody></table></div></div>}
    {activeOutlet&&<>

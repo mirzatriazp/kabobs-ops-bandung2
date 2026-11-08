@@ -1,0 +1,101 @@
+/* KABOBS OPS — Dashboard Sales Final v5 */
+/* Keep the Sales comparison and Team In Charge ON THE SAME ROW on desktop. */
+.horizontal-shell .dashboard-grid.dashboard-sales-team-grid {
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  gap:16px!important;
+  align-items:stretch!important;
+  width:100%;
+  margin-bottom:18px;
+}
+.horizontal-shell .dashboard-sales-team-grid > .dashboard-sales-compare-panel,
+.horizontal-shell .dashboard-sales-team-grid > .dashboard-tod-slot {
+  flex:1 1 0!important;
+  min-width:0!important;
+  max-width:none!important;
+  width:0!important;
+  margin:0!important;
+  box-sizing:border-box;
+}
+.horizontal-shell .dashboard-sales-team-grid .dashboard-tod-slot > .tod-card {
+  display:block;
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  height:100%;
+  margin:0!important;
+  box-sizing:border-box;
+}
+.dashboard-kpi-card .dashboard-kpi-note {
+  font-size:11px;
+  color:#8190a7;
+  text-align:center;
+  line-height:1.5;
+  margin:8px auto 0;
+}
+.dashboard-sales-compare-panel {text-align:center}
+.dashboard-sales-compare-panel > p.muted {font-size:12px;margin:8px 0 15px}
+.dashboard-sales-compare-panel .sales-compare,
+.dashboard-sales-compare-panel .sales-diff-compare {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin:0 0 14px;
+}
+.dashboard-sales-compare-panel .sales-compare > div,
+.dashboard-sales-compare-panel .sales-diff-box {
+  min-width:0;
+  min-height:132px;
+  padding:13px 7px;
+  border:1px solid #e5ebf4;
+  border-radius:11px;
+  background:white;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  align-items:center;
+  text-align:center;
+  gap:8px;
+}
+.dashboard-sales-compare-panel .sales-compare > div > span,
+.dashboard-sales-compare-panel .sales-diff-box > span {
+  min-height:43px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:10px;
+  line-height:1.45;
+  color:#7888a6;
+}
+.dashboard-sales-compare-panel .sales-compare > div > strong,
+.dashboard-sales-compare-panel .sales-diff-box > strong {
+  display:block;
+  width:100%;
+  margin:6px 0 0;
+  font-size:clamp(14px,1.32vw,20px);
+  font-weight:800;
+  line-height:1.25;
+  letter-spacing:-.35px;
+  font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere;
+  color:#17243d;
+}
+.dashboard-sales-compare-panel .sales-diff-box > strong.is-negative {color:#c73333}
+.dashboard-sales-compare-panel .sales-diff-box > strong.is-positive {color:#10804c}
+.dashboard-sales-compare-panel .sales-diff-box > strong.is-neutral {color:#17243d}
+.dashboard-sales-compare-panel .sales-diff-box > strong.is-empty {color:#7e8a9e}
+.dashboard-sales-compare-panel .sales-diff-box > small {font-size:10px;line-height:1.4;color:#8795a8}
+@media(max-width:780px) {
+  .horizontal-shell .dashboard-grid.dashboard-sales-team-grid {flex-direction:column!important}
+  .horizontal-shell .dashboard-sales-team-grid > .dashboard-sales-compare-panel,
+  .horizontal-shell .dashboard-sales-team-grid > .dashboard-tod-slot {width:100%!important;flex:0 0 auto!important}
+  .dashboard-sales-compare-panel .sales-compare > div > strong,
+  .dashboard-sales-compare-panel .sales-diff-box > strong {font-size:16px}
+}
+@media(max-width:480px) {
+  .dashboard-sales-compare-panel .sales-compare > div,
+  .dashboard-sales-compare-panel .sales-diff-box {padding:10px 5px}
+  .dashboard-sales-compare-panel .sales-compare > div > strong,
+  .dashboard-sales-compare-panel .sales-diff-box > strong {font-size:12px}
+}

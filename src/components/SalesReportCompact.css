@@ -1,0 +1,69 @@
+/* KABOBS OPS · Sales Report compact table (AM & Leader)
+   Scoped to the daily sales table. Does not alter calculations, input logic or Excel export. */
+.sales-table-scroll:has(.sales-table--compact) {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.sales-table.sales-table--compact {
+  width: 100%;
+  min-width: 940px;
+  table-layout: auto;
+  font-size: 11.5px;
+}
+.sales-table--compact th,
+.sales-table--compact td {
+  padding: 9px 7px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.sales-table--compact th:first-child,
+.sales-table--compact td:first-child { padding-left: 10px; }
+.sales-table--compact th:last-child,
+.sales-table--compact td:last-child { padding-right: 9px; }
+.sales-table--compact td input {
+  width: 104px;
+  min-width: 0;
+  max-width: 104px;
+  box-sizing: border-box;
+  padding: 7px 6px;
+  font-size: 11.5px;
+}
+.sales-table--compact .sales-actions--row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  min-width: 0;
+}
+.sales-table--compact .sales-actions--row .sales-button {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 59px;
+  padding: 8px 9px;
+  font-size: 11px;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+/* Aksi remains visible even when a narrow POS screen needs horizontal scrolling. */
+.sales-table--compact th:last-child,
+.sales-table--compact td.sales-action-cell {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  text-align: center;
+  box-shadow: -3px 0 8px rgb(20 32 57 / 7%);
+}
+.sales-table--compact th:last-child { z-index: 4; background: #18233c; }
+.sales-table--compact td.sales-action-cell { background: #fff; }
+.sales-table--compact tbody tr:nth-child(even) td.sales-action-cell { background: #fafbfe; }
+.sales-table--compact tbody tr:hover td.sales-action-cell { background: #fff8e6; }
+.sales-table--compact tbody tr.day-today td.sales-action-cell { background: #fff6d9; }
+@media (max-width: 1150px) {
+  .sales-table.sales-table--compact { min-width: 890px; font-size: 11px; }
+  .sales-table--compact th, .sales-table--compact td { padding: 8px 5px; }
+  .sales-table--compact td input { width: 92px; max-width: 92px; }
+  .sales-table--compact .sales-actions--row .sales-button { min-width: 55px; padding: 7px 7px; }
+}
