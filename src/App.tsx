@@ -9,6 +9,7 @@ import { CalendarActivity, GeneralInformation } from './components/CalendarActiv
 import './App.css'
 import VisitAM from './components/VisitAM'
 import './components/VisitAM.css'
+import PIQPerformance from './components/PIQPerformance'
 type Profile = {
   id: string
   nik: string
@@ -177,6 +178,14 @@ export default function App() {
         </> : activePage === 'Calendar Activity' ? <CalendarActivity role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'General Information' ? <GeneralInformation role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'Sales Report' ? <SalesReport role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} /> : activePage === 'Defect & Maintenance' ? <Maintenance role={profile.role} outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')} outlets={outlets} month={month} year={year} />
 : activePage === 'Report Visit AM'
   ? <VisitAM
+      role={profile.role}
+      outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+      outlets={outlets}
+      month={month}
+      year={year}
+    />
+    : activePage === 'PIQ Performance'
+  ? <PIQPerformance
       role={profile.role}
       outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
       outlets={outlets}
