@@ -72,11 +72,13 @@ export default function SalesReport({role,outletId,outlets,month,year}:Props) {
   const allActual=actuals.reduce((s,r)=>s+Number(r.actual_amount),0)
   const allTarget=targets.reduce((s,r)=>s+Number(r.target_amount),0)
   const rowsCompleted=eligibleRows.filter(r=>r.actual!==null).length
-  const pairedRows=eligibleRows.filter(r=>r.actual!==null && r.target!==null)
-  const matchedActual=pairedRows.reduce((sum,r)=>sum+(r.actual ?? 0),0)
-  const matchedTarget=pairedRows.reduce((sum,r)=>sum+(r.target ?? 0),0)
-  const displayGap=pairedRows.length>0?fmt(matchedActual-matchedTarget):'—'
-  const displayAchievement=pairedRows.length>0?pct(matchedActual,matchedTarget):'—' 
+  const targetDays=eligibleRows.filter(r=>r.target!==null).length
+  const actualDays=eligibleRows.filter(r=>r.actual!==null).length
+  const completeMTD=eligibleRows.length>0 && fullTarget && fullActual
+  // Summary comparisons use the same selected MTD cutoff; missing days are not zero sales.
+  const mtdComparable=targetDays>0 && actualDays>0
+  const mtdGap=mtdComparable?totalActual-totalTarget:null
+  const mtdAchievement=mtdComparable?pct(totalActual,totalTarget):'—'
 
   async function save(date:string,kind:'target'|'actual'){
     if(!outletId)return
@@ -114,20 +116,19 @@ export default function SalesReport({role,outletId,outlets,month,year}:Props) {
       <div className="sales-summary">
         <div className="sales-metric"><small>{isAll?'Actual terinput area':'Actual MTD'}</small><strong>{isAll?fmt(allActual):fmt(totalActual)}</strong><span>{isAll?'Agregasi entri bulan dipilih':`${rowsCompleted}/${eligibleRows.length} hari terisi sampai cutoff`}</span></div>
         <div className="sales-metric"><small>Target MTD</small><strong>{fmt(isAll?allTarget:totalTarget)}</strong><span>{isAll?'Dari target terinput area':`${eligibleRows.filter(r=>r.target!==null).length}/${eligibleRows.length} hari target terisi`}</span></div>
-        <div className="sales-metric"><small>Selisih To-Date</small><strong>{isAll?'—':displayGap}</strong><span>{isAll?'Pilih outlet':fullTarget&&fullActual?'Lengkap hingga cutoff':`SEMENTARA: ${pairedRows.length}/${eligibleRows.length} tanggal berpasangan`}</span></div>
-        <div className="sales-metric"><small>Achievement</small><strong>{isAll?'—':displayAchievement}</strong><span>{isAll?'Pilih outlet':'Dihitung dari tanggal dengan target dan actual'} </span></div>
+        <div className="sales-metric"><small>Selisih Actual MTD vs Target MTD</small><strong style={{color:!isAll&&mtdGap!==null&&mtdGap<0?'#c73333':'#142039'}}>{isAll?'—':mtdGap===null?'—':fmt(mtdGap)}</strong><span>{isAll?'Pilih outlet':completeMTD?'Periode lengkap':'SEMENTARA · data sales / target belum lengkap'}</span></div>
+        <div className="sales-metric"><small>Achievement Actual MTD / Target MTD</small><strong>{isAll?'—':mtdAchievement}</strong><span>{isAll?'Pilih outlet':completeMTD?'Periode lengkap':'SEMENTARA · aktual MTD ÷ target MTD'} </span></div>
       </div>
       {isAll ? <>
         <p className="sales-help">Data Area Manager berikut merangkum jumlah actual/target yang sudah diinput untuk bulan terpilih. Ini bukan achievement final sebelum semua tanggal lengkap.</p>
         <div className="sales-table-scroll"><table className="sales-table"><thead><tr><th>Outlet</th><th>Actual terinput</th><th>Target terinput</th><th>Hari Actual</th></tr></thead><tbody>{outlets.map(o=><tr key={o.id}><td>{o.outlet_name}</td><td>{fmt(actuals.filter(x=>x.outlet_id===o.id).reduce((a,x)=>a+Number(x.actual_amount),0))}</td><td>{fmt(targets.filter(x=>x.outlet_id===o.id).reduce((a,x)=>a+Number(x.target_amount),0))}</td><td>{actuals.filter(x=>x.outlet_id===o.id).length}/{days}</td></tr>)}</tbody></table></div>
       </> : <>
         <p className="sales-help">{role==='AM'?'Area Manager: dapat input/update target harian dan actual sales.':'Leader: hanya dapat input/update actual sales; target ditentukan Area Manager.'} Untuk hari yang belum diinput, angka tidak dianggap Rp0.</p>
-        <div className="sales-table-scroll"><table className="sales-table"><thead><tr><th>Tanggal</th><th>Target Today</th><th>Actual Today</th><th>Target To-Date</th><th>Actual To-Date</th><th>Selisih Today</th><th>Selisih To-Date</th><th>Ach. To-Date</th><th>Aksi</th></tr></thead><tbody>
+        <div className="sales-table-scroll"><table className="sales-table"><thead><tr><th>Tanggal</th><th>Target Today</th><th>Actual Today</th><th>Target To-Date</th><th>Actual To-Date</th><th>Selisih vs Target</th><th>Achievement Today</th><th>Aksi</th></tr></thead><tbody>
           {tableRows.map(r=>{
             const tValue=targetDrafts[r.date]??(r.target===null?'':String(r.target))
             const aValue=drafts[r.date]??(r.actual===null?'':String(r.actual))
             const dailyGap=r.target!==null&&r.actual!==null?r.actual-r.target:null
-            const cumulativeGap=r.cumulativeTarget!==null&&r.cumulativeActual!==null?r.cumulativeActual-r.cumulativeTarget:null
             return <tr key={r.date} className={r.date===today?'day-today':''}>
               <td><strong>{new Intl.DateTimeFormat('id-ID',{day:'2-digit',month:'short'}).format(new Date(year,month-1,r.day))}</strong></td>
               <td>{role==='AM'?<input aria-label={'Target '+r.date} type="text" inputMode="numeric" value={formatInputRupiah(tValue)} onChange={e=>setTargetDrafts(p=>({...p,[r.date]:e.target.value.replace(/\D/g,'')}))} />:r.target===null?<span className="missing">Belum ada</span>:fmt(r.target)}</td>
@@ -135,8 +136,7 @@ export default function SalesReport({role,outletId,outlets,month,year}:Props) {
               <td>{r.cumulativeTarget!==null?fmt(r.cumulativeTarget):<span className="missing">Belum lengkap</span>}</td>
               <td>{r.cumulativeActual!==null?fmt(r.cumulativeActual):<span className="missing">Belum lengkap</span>}</td>
               <td className={dailyGap!==null?(dailyGap<0?'negative':'positive'):''}>{dailyGap===null?'—':fmt(dailyGap)}</td>
-              <td className={cumulativeGap!==null?(cumulativeGap<0?'negative':'positive'):''}>{cumulativeGap===null?'—':fmt(cumulativeGap)}</td>
-              <td>{r.cumulativeTarget!==null&&r.cumulativeActual!==null?pct(r.cumulativeActual,r.cumulativeTarget):'—'}</td>
+              <td>{r.target!==null&&r.actual!==null?pct(r.actual,r.target):'—'}</td>
               <td><div className="sales-actions">{role==='AM'&&<button className="sales-button secondary" disabled={!!busyKey||tValue===''} onClick={()=>save(r.date,'target')}>Target</button>}<button className="sales-button" disabled={!!busyKey||aValue===''} onClick={()=>save(r.date,'actual')}>{busyKey===r.date+'actual'?'...':'Simpan'}</button></div></td>
             </tr>
           })}

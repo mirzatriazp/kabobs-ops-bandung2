@@ -98,15 +98,16 @@ export default function DashboardSales({role,outletId,outlets,month,year}:Props)
 
   const {current,previous,lastYear,cutoff}=data
   const complete=current.totalDays>0&&current.actualDays===current.totalDays&&current.targetDays===current.totalDays
-  const achievement=current.matchedTarget>0?(current.matchedActual/current.matchedTarget*100):null
-  const gap=current.matchedDays>0?current.matchedActual-current.matchedTarget:null
-  const tile=(label:string,value:string,description:string)=> <div className="stat-card" key={label}><div className="stat-title">{label}</div><div className="stat-empty">{value}</div><div className="stat-foot">{description}</div></div>
+  const comparable=current.actualDays>0&&current.targetDays>0
+  const achievement=comparable&&current.target>0?(current.actual/current.target*100):null
+  const gap=comparable?current.actual-current.target:null
+  const tile=(label:string,value:string,description:string,negative=false)=> <div className="stat-card" key={label}><div className="stat-title">{label}</div><div className="stat-empty" style={{color:negative?'#c73333':'#142039'}}>{value}</div><div className="stat-foot">{description}</div></div>
   return <>
     <div className="stats">
       {tile('Sales MTD (Terinput)',fmt(current.actual),`${current.actualDays}/${current.totalDays} hari-outlet terisi · ${current.label}`)}
       {tile('Target To-Date (Terinput)',fmt(current.target),`${current.targetDays}/${current.totalDays} hari-outlet target terisi`)}
-      {tile('Selisih To-Date',gap===null?'—':fmt(gap),`Perbandingan ${current.matchedDays} tanggal-outlet dengan target & actual lengkap`)}
-      {tile('Achievement',achievement===null?'—':achievement.toFixed(2)+'%',complete?'Periode sudah lengkap':'SEMENTARA · hanya tanggal yang memiliki target & actual')}
+      {tile('Selisih Actual MTD vs Target MTD',gap===null?'—':fmt(gap),complete?'Periode lengkap':'SEMENTARA · Actual MTD − Target MTD',gap!==null&&gap<0)}
+      {tile('Achievement MTD',achievement===null?'—':achievement.toFixed(2)+'%',complete?'Periode sudah lengkap':'SEMENTARA · Actual MTD ÷ Target MTD')}
     </div>
     <div className="dashboard-grid">
       <section className="panel">
