@@ -115,6 +115,36 @@ export default function VisitAM({role,outletId,outlets,month,year}:Props){
     }catch(e){setError(e instanceof Error?e.message:'Gagal verifikasi')}
     finally{setBusy(false)}
   }
+  function deletionErrorMessage(value: unknown): string {
+    if (value instanceof Error) return value.message
+    if (typeof value === 'string') return value
+    if (value && typeof value === 'object') {
+      const obj = value as Record<string, unknown>
+      const details = [obj.message, obj.details, obj.hint, obj.code]
+        .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+      if (details.length) return details.join(' | ')
+    }
+    return 'Gagal menghapus. Buka DevTools (F12) untuk melihat respons Supabase.'
+  }
+
+  async function deleteFinding(r:Finding){
+    if(role!=='AM'||busy)return
+    const outletName=outlets.find(o=>o.id===r.outlet_id)?.outlet_name||'Outlet'
+    const agreed=window.confirm(`Hapus temuan Report Visit AM untuk ${outletName} (${displayDate(r.visit_date)})?\n\n${r.finding}\n\nTindakan ini tidak dapat dibatalkan.`)
+    if(!agreed)return
+    setBusy(true);setError('');setSuccess('')
+    try{
+      const {data:{user},error:authError}=await supabase.auth.getUser()
+      if(authError||!user)throw new Error('Sesi login berakhir. Silakan masuk kembali.')
+      const {data:deleted,error:deleteError}=await supabase.from('am_visit_findings').delete().eq('id',r.id).select('id')
+      if(deleteError)throw deleteError
+      if(!deleted?.length)throw new Error('Temuan tidak terhapus. Periksa izin DELETE (RLS) untuk akun AM di Supabase.')
+      await fetchRows()
+      setSuccess('Temuan Report Visit AM berhasil dihapus.')
+    }catch(e){console.error('Delete Report Visit AM gagal:', e);setError('Gagal menghapus temuan: '+deletionErrorMessage(e))}
+    finally{setBusy(false)}
+  }
+
   const visible=rows.filter(r=>statusFilter==='all'||r.status===statusFilter)
   const renderPhoto=(key:string,path:string|null)=>path?(imageLinks[key]?
     <a className="visit-photo-link" href={imageLinks[key]} target="_blank" rel="noopener noreferrer" title="Klik untuk melihat foto ukuran penuh">
@@ -138,7 +168,7 @@ export default function VisitAM({role,outletId,outlets,month,year}:Props){
       </div><button className="visit-primary" disabled={busy} type="submit">{busy?'Menyimpan...':'Simpan Temuan AM'}</button>
     </form>}
     <div className="visit-toolbar"><span><b>{visible.length} temuan</b> · {new Date(year,month-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</span><label>Filter status <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">Semua</option>{Object.entries(labels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label></div>
-    {loading?<p>Memuat report visit...</p>:visible.length===0?<div className="visit-empty">Belum ada temuan untuk periode dan filter ini.</div>:<div className="visit-scroll"><table className="visit-table"><thead><tr>{(role==='AM'?['Outlet','Tanggal Visit','Kategori','Temuan','Foto','Priority','Due Date','Corrective Action','Foto Perbaikan','Status','Catatan AM','Verifikasi']:['Tanggal Visit','Kategori','Temuan','Foto','Priority','Due Date','Corrective Action','Foto Perbaikan','Status','Catatan AM','Kirim Koreksi']).map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{visible.map(r=><tr key={r.id}>
+    {loading?<p>Memuat report visit...</p>:visible.length===0?<div className="visit-empty">Belum ada temuan untuk periode dan filter ini.</div>:<div className="visit-scroll"><table className={`visit-table ${role==='AM'?'visit-table-am':'visit-table-leader'}`}><thead><tr>{(role==='AM'?['Outlet','Tanggal Visit','Kategori','Temuan','Foto','Priority','Due Date','Corrective Action','Foto Perbaikan','Status','Catatan AM','Verifikasi','Aksi']:['Tanggal Visit','Kategori','Temuan','Foto','Priority','Due Date','Corrective Action','Foto Perbaikan','Status','Catatan AM','Kirim Koreksi']).map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{visible.map(r=><tr key={r.id}>
       {role==='AM'&&<td>{outlets.find(o=>o.id===r.outlet_id)?.outlet_name||'—'}</td>}
       <td>{displayDate(r.visit_date)}</td><td>{r.category}</td><td className="visit-long">{r.finding}</td><td>{renderPhoto(r.id+':finding',r.finding_photo_path)}</td><td>{r.priority}</td>
       <td><span className={r.due_date<new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())&&r.status!=='done'?'visit-overdue':''}>{displayDate(r.due_date)}</span></td>
@@ -147,6 +177,7 @@ export default function VisitAM({role,outletId,outlets,month,year}:Props){
       <td><span className={'visit-status status-'+r.status}>{labels[r.status]}</span></td>
       <td className="visit-long">{role==='AM'&&r.status==='submitted'?<textarea rows={3} aria-label={'Catatan AM '+r.id} value={reviews[r.id]?.notes||''} onChange={e=>setReviews(p=>({...p,[r.id]:{...(p[r.id]||{status:'done'}),notes:e.target.value}}))}/>:r.am_notes||'—'}</td>
       <td>{role==='AM' ? (r.status==='submitted'?<div className="visit-row-actions"><select aria-label={'Verifikasi '+r.id} value={reviews[r.id]?.status||'done'} onChange={e=>setReviews(p=>({...p,[r.id]:{...(p[r.id]||{notes:''}),status:e.target.value as 'done'|'revision'}}))}><option value="done">Done</option><option value="revision">Perlu Revisi</option></select><button className="visit-primary" disabled={busy} onClick={()=>void verify(r)}>Simpan</button></div>:<span className="visit-muted">{r.status==='done'?'Terverifikasi':'Menunggu Leader'}</span>) : (r.status!=='done'?<button className="visit-primary" disabled={busy} onClick={()=>void submitCorrection(r)}>Kirim koreksi</button>:<span className="visit-muted">Selesai</span>)}</td>
+      {role==='AM'&&<td className="visit-delete-cell"><button type="button" className="visit-delete-icon" title="Hapus temuan" aria-label={`Hapus temuan: ${r.finding}`} disabled={busy} onClick={()=>void deleteFinding(r)}><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M5 6l1 14h12l1-14"/><path d="M10 10v6M14 10v6"/></svg></button></td>}
     </tr>)}</tbody></table></div>}
     <p className="visit-footnote">* Tabel dapat digeser ke samping. Status Done hanya dapat diberikan AM setelah Leader mengirim corrective action.</p>
   </section>
