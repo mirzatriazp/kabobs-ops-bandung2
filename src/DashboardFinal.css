@@ -21,3 +21,68 @@
 @media(max-width:780px) {
   .horizontal-shell .dashboard-grid.dashboard-info-grid {grid-template-columns:minmax(0,1fr)}
 }
+
+/* Dashboard — compact General Information memo layout.
+   Keep announcement body above document info and full-width action below.
+   Scoped to the Dashboard only; standalone General Information is unchanged. */
+.horizontal-shell .dashboard-info-grid .ops-info-panel {
+  min-width: 0;
+}
+.horizontal-shell .dashboard-info-grid .ops-info-panel .ops-memo-card {
+  min-width: 0;
+  padding: 15px 13px;
+}
+.horizontal-shell .dashboard-info-grid .ops-info-panel .ops-memo-message {
+  margin: 12px 0 15px !important;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.horizontal-shell .dashboard-info-grid .ops-info-panel .ops-memo-attachment {
+  display: grid;
+  grid-template-columns: 39px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px 11px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0 auto 12px;
+  padding: 12px;
+  text-align: left;
+}
+.horizontal-shell .dashboard-info-grid .ops-info-panel .ops-memo-doc-icon {
+  grid-column: 1;
+  grid-row: 1;
+  width: 39px;
+  height: 39px;
+  min-width: 0;
+  font-size: 23px;
+}
+.horizontal-shell .dashboard-info-grid .ops-info-panel .ops-memo-doc-detail {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  width: 100%;
+}
+.horizontal-shell .dashboard-info-grid .ops-info-panel .ops-memo-doc-detail strong {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.55;
+  font-size: 11px;
+}
+.horizontal-shell .dashboard-info-grid .ops-info-panel .ops-memo-doc-detail small {
+  display: block;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.horizontal-shell .dashboard-info-grid .ops-info-panel button.ops-memo-open {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 11px 13px;
+  text-align: center;
+  white-space: normal;
+}

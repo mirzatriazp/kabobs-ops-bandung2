@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { downloadXlsx } from '../lib/exportXlsx'
+import { readSalesExcel, type SalesImportMode, type SalesImportPreview } from '../lib/sales_excel_import'
 import './SalesReportCompact.css'
 
 type Outlet = {id: string; outlet_name: string; outlet_code: string}
@@ -30,6 +31,15 @@ export default function SalesReport({role,outletId,outlets,month,year}:Props) {
   const [messageType,setMessageType]=useState<'error'|'success'>('success')
   const [version,setVersion]=useState(0)
   const [periodError,setPeriodError]=useState('')
+  const [importMode,setImportMode]=useState<SalesImportMode>('target')
+  const [importPreview,setImportPreview]=useState<SalesImportPreview|null>(null)
+  const [importFileName,setImportFileName]=useState('')
+  const [importReading,setImportReading]=useState(false)
+  const [importSaving,setImportSaving]=useState(false)
+  const [overwriteExisting,setOverwriteExisting]=useState(false)
+  const [importError,setImportError]=useState('')
+  const [importSuccess,setImportSuccess]=useState('')
+  const [showImportForm,setShowImportForm]=useState(false)
   const days = new Date(year,month,0).getDate()
   const start = dateKey(year,month,1)
   const end = dateKey(year,month,days)
@@ -49,6 +59,7 @@ export default function SalesReport({role,outletId,outlets,month,year}:Props) {
   },[start,end,outletId])
   useEffect(()=>{load()},[load,version])
   useEffect(()=>{setDrafts({});setTargetDrafts({});setFeedback('')},[outletId,month,year])
+  useEffect(()=>{setImportPreview(null);setImportError('');setImportSuccess('');setOverwriteExisting(false)},[outletId,month,year,importMode])
 
   const tableRows=useMemo(()=>{
     if(!outletId)return []
@@ -108,6 +119,85 @@ export default function SalesReport({role,outletId,outlets,month,year}:Props) {
     ])
   }
 
+  function downloadImportTemplate(){
+    if(role!=='AM')return
+    const chosen=outletId?outlets.filter(o=>o.id===outletId):outlets
+    const header=['Outlet','Tanggal','Target Today','Actual Today']
+    const rows:(string|number|null)[][]=[header]
+    for(const outlet of chosen)for(let day=1;day<=days;day++){
+      rows.push([outlet.outlet_name,dateKey(year,month,day),null,null])
+    }
+    downloadXlsx(`KABOBS_Template_Import_Sales_${year}_${String(month).padStart(2,'0')}.xlsx`,[{name:'Sales Harian',rows}])
+  }
+
+  async function pickImportFile(file:File|undefined){
+    setImportError('');setImportSuccess('');setImportPreview(null);setOverwriteExisting(false)
+    if(!file)return
+    setImportReading(true);setImportFileName(file.name)
+    try{
+      const preview=await readSalesExcel(file,importMode,outlets,outletId,year,month)
+      setImportPreview(preview)
+    }catch(err){setImportError(err instanceof Error?err.message:String(err))}
+    finally{setImportReading(false)}
+  }
+
+  const importCounts=useMemo(()=>{
+    if(!importPreview)return {target:0,actual:0,existing:0}
+    const tm=new Set(targets.map(v=>`${v.outlet_id}|${v.sales_date}`))
+    const am=new Set(actuals.map(v=>`${v.outlet_id}|${v.sales_date}`))
+    let target=0,actual=0,existing=0
+    for(const r of importPreview.rows){
+      const key=`${r.outletId}|${r.date}`
+      if(r.target!==null){target++;if(tm.has(key))existing++}
+      if(importMode==='historical'&&r.actual!==null){actual++;if(am.has(key))existing++}
+    }
+    return {target,actual,existing}
+  },[importPreview,targets,actuals,importMode])
+
+  async function applyImport(){
+    if(role!=='AM'||!importPreview||importSaving||working||!!periodError)return
+    if(importPreview.warnings.length){
+      setImportError('Ada baris yang tidak valid/diabaikan. Perbaiki file Excel dahulu agar data historis tidak terlewat.');return
+    }
+    if(importCounts.existing>0&&!overwriteExisting){
+      // Safe default: skip existing database records, including Leader actuals.
+    }
+    const message=overwriteExisting
+      ?`Timpa data yang sudah ada pada ${importCounts.existing} sel dan impor ${importPreview.rows.length} baris?`
+      :`Impor ${importPreview.rows.length} baris? Data yang sudah ada TIDAK akan ditimpa.`
+    if(!window.confirm(message))return
+    setImportSaving(true);setImportError('');setImportSuccess('')
+    try{
+      // Re-read database just before saving to avoid relying on stale preview data.
+      const [t,a]=await Promise.all([
+        supabase.from('sales_daily_targets').select('outlet_id,sales_date').gte('sales_date',start).lte('sales_date',end),
+        supabase.from('sales_daily_actuals').select('outlet_id,sales_date').gte('sales_date',start).lte('sales_date',end),
+      ])
+      if(t.error||a.error)throw new Error('Gagal memeriksa data existing: '+(t.error?.message||a.error?.message))
+      const existingT=new Set((t.data||[]).map(v=>`${v.outlet_id}|${v.sales_date}`))
+      const existingA=new Set((a.data||[]).map(v=>`${v.outlet_id}|${v.sales_date}`))
+      const pendingT=importPreview.rows.filter(r=>r.target!==null&&(overwriteExisting||!existingT.has(`${r.outletId}|${r.date}`)))
+        .map(r=>({outlet_id:r.outletId,sales_date:r.date,target_amount:r.target as number}))
+      const pendingA=importMode==='historical' ? importPreview.rows.filter(r=>r.actual!==null&&(overwriteExisting||!existingA.has(`${r.outletId}|${r.date}`)))
+        .map(r=>({outlet_id:r.outletId,sales_date:r.date,actual_amount:r.actual as number})) : []
+      let nT=0,nA=0
+      for(let i=0;i<pendingT.length;i+=100){
+        const {error}=await supabase.from('sales_daily_targets').upsert(pendingT.slice(i,i+100),{onConflict:'outlet_id,sales_date'})
+        if(error)throw new Error(`Target: ${error.message}. ${nT} baris target sudah tersimpan.`)
+        nT+=Math.min(100,pendingT.length-i)
+      }
+      for(let i=0;i<pendingA.length;i+=100){
+        const {error}=await supabase.from('sales_daily_actuals').upsert(pendingA.slice(i,i+100),{onConflict:'outlet_id,sales_date'})
+        if(error)throw new Error(`Actual: ${error.message}. ${nT} target dan ${nA} actual sudah tersimpan.`)
+        nA+=Math.min(100,pendingA.length-i)
+      }
+      setImportSuccess(`Import berhasil: ${nT} target dan ${nA} actual tersimpan. ${importCounts.target+importCounts.actual-nT-nA} data existing/kosong tidak diubah.`)
+      setImportPreview(null);setOverwriteExisting(false)
+      setVersion(v=>v+1)
+    }catch(err){setImportError(err instanceof Error?err.message:String(err))}
+    finally{setImportSaving(false)}
+  }
+
   async function save(date:string,kind:'target'|'actual'){
     if(!outletId)return
     const draftsForKind=kind==='target'?targetDrafts:drafts
@@ -137,8 +227,29 @@ export default function SalesReport({role,outletId,outlets,month,year}:Props) {
     <section className="panel">
       <div className="sales-actions" style={{justifyContent:'space-between'}}>
         <div><h3>Daily Sales Report</h3><p className="sales-help">{isAll?'Ringkasan seluruh outlet. Pilih satu outlet pada filter di atas untuk input dan detail tanggal.':`${activeOutletName||'Outlet'} · ${new Intl.DateTimeFormat('id-ID',{month:'long',year:'numeric'}).format(new Date(year,month-1,1))}`}</p></div>
-        {role==='AM' && <button type="button" className="sales-button secondary" disabled={working||!!periodError} onClick={exportExcel}>⬇ Download Excel</button>}<button className="sales-button secondary" disabled={working} onClick={()=>setVersion(v=>v+1)}>{working?'Memuat...':'↻ Refresh data'}</button>
+        <div className="sales-import-top-actions">
+          {role==='AM'&&<button type="button" className="sales-button secondary sales-import-toggle" aria-expanded={showImportForm} aria-controls="sales-import-form" disabled={importSaving} onClick={()=>setShowImportForm(v=>!v)}>{showImportForm?'↑ Tutup Form Upload':'↓ Buka Form Upload'}</button>}
+          {role==='AM'&&<button type="button" className="sales-button secondary" disabled={working||!!periodError} onClick={exportExcel}>⬇ Download Excel</button>}
+          <button className="sales-button secondary" disabled={working} onClick={()=>setVersion(v=>v+1)}>{working?'Memuat...':'↻ Refresh data'}</button>
+        </div>
       </div>
+      {role==='AM'&&showImportForm&&<div className="sales-import-panel" id="sales-import-form">
+        <div className="sales-import-header"><div><strong>Upload Excel Sales — Khusus AM</strong><p className="sales-help">Pilih outlet & periode di filter atas. Excel boleh berisi satu atau beberapa outlet. Data akan diperiksa sebelum disimpan.</p></div><button type="button" className="sales-button secondary" onClick={downloadImportTemplate} disabled={working||importSaving}>⬇ Download Template Import</button></div>
+        <div className="sales-import-controls"><label>Jenis import<select value={importMode} disabled={importSaving||importReading} onChange={e=>setImportMode(e.target.value as SalesImportMode)}><option value="target">Target Only (rutin)</option><option value="historical">Historis: Target + Actual (Jan 2025–Okt 2026)</option></select></label><label className="sales-import-file">Pilih File Excel (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={working||importSaving||importReading} onChange={e=>{void pickImportFile(e.target.files?.[0]);e.target.value=''}} /></label></div>
+        <p className="sales-help">{importMode==='target'?'Mode Target Only tidak akan mengubah Actual Today yang diisi Leader.':'Mode Historis hanya menerima tanggal Januari 2025–Oktober 2026. Pilih bulan/tahun historis pada filter di atas.'} Data kosong tidak diubah; nol (0) adalah nilai valid.</p>
+        {importReading&&<div className="sales-alert">Membaca dan memvalidasi Excel...</div>}
+        {importError&&<div className="sales-alert error" role="alert">{importError}</div>}
+        {importSuccess&&<div className="sales-alert success" role="status">{importSuccess}</div>}
+        {importPreview&&<div className="sales-import-preview">
+          <strong>Preview: {importFileName}</strong>
+          <p className="sales-help">Sheet: {importPreview.sheet} · {importPreview.rows.length} baris valid · {importCounts.target} target · {importCounts.actual} actual · {importCounts.existing} data sudah ada</p>
+          <div className="sales-import-tablewrap"><table className="sales-import-table"><thead><tr><th>Outlet</th><th>Tanggal</th><th>Target Today</th><th>Actual Today</th></tr></thead><tbody>{importPreview.rows.slice(0,12).map(r=><tr key={`${r.outletId}|${r.date}`}><td>{r.outlet}</td><td>{r.date}</td><td>{r.target===null?'—':fmt(r.target)}</td><td>{importMode==='target'?'Tidak diubah':r.actual===null?'—':fmt(r.actual)}</td></tr>)}</tbody></table></div>
+          {importPreview.rows.length>12&&<p className="sales-help">Menampilkan 12 dari {importPreview.rows.length} baris.</p>}
+          {importPreview.warnings.length>0&&<div className="sales-alert error"><strong>{importPreview.warnings.length} peringatan — perbaiki Excel sebelum import:</strong>{importPreview.warnings.slice(0,12).map((w,i)=><div key={i}>{w}</div>)}{importPreview.warnings.length>12&&<div>... dan {importPreview.warnings.length-12} peringatan lainnya.</div>}</div>}
+          {importCounts.existing>0&&<label className="sales-import-overwrite"><input type="checkbox" checked={overwriteExisting} onChange={e=>setOverwriteExisting(e.target.checked)} /> Izinkan menimpa {importCounts.existing} data yang sudah ada (jika tidak dicentang, data existing dilewati).</label>}
+          <div className="sales-import-buttons"><button className="sales-button" type="button" disabled={importSaving||working||importPreview.warnings.length>0} onClick={()=>void applyImport()}>{importSaving?'Menyimpan...':'Terapkan & Simpan Excel'}</button><button className="sales-button secondary" type="button" disabled={importSaving} onClick={()=>setImportPreview(null)}>Batal</button></div>
+        </div>}
+      </div>}
       {periodError && <div className="sales-alert error">{periodError}. Pastikan SQL sales sudah dijalankan dan policy RLS tersedia.</div>}
       {feedback && <div role="status" className={'sales-alert '+messageType}>{feedback}</div>}
       <div className="sales-summary">

@@ -67,3 +67,31 @@
   .sales-table--compact td input { width: 92px; max-width: 92px; }
   .sales-table--compact .sales-actions--row .sales-button { min-width: 55px; padding: 7px 7px; }
 }
+
+/* Sales Excel importer – compact and contained */
+.sales-import-panel{margin:16px 0 20px;border:1px solid #e3e9f1;background:#fafbfd;border-radius:14px;padding:16px}
+.sales-import-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.sales-import-header strong{font-size:14px;color:#172842}
+.sales-import-header p{margin:4px 0 0}
+.sales-import-controls{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:10px}
+.sales-import-controls label{display:grid;gap:6px;font-size:12px;font-weight:600;color:#263955}
+.sales-import-controls select,.sales-import-controls input[type=file]{border:1px solid #d6dfeb;border-radius:9px;padding:9px;background:#fff;color:#172842;font-size:12px;max-width:100%}
+.sales-import-controls select{min-width:260px}
+.sales-import-file{max-width:380px}
+.sales-import-preview{background:white;border:1px solid #e1e7ef;border-radius:11px;padding:13px;margin-top:12px}
+.sales-import-preview>strong{font-size:13px}
+.sales-import-tablewrap{overflow:auto;max-height:350px;border:1px solid #e1e7ef;border-radius:8px;margin:9px 0}
+.sales-import-table{width:100%;border-collapse:collapse;font-size:11px;text-align:left}
+.sales-import-table th,.sales-import-table td{padding:8px 9px;border-bottom:1px solid #e7ebf2;white-space:nowrap}
+.sales-import-table th{background:#16243e;color:#fff;position:sticky;top:0}
+.sales-import-overwrite{display:flex;align-items:flex-start;gap:9px;margin:12px 0;color:#873d16;font-weight:600;font-size:12px}
+.sales-import-overwrite input{margin-top:3px}
+.sales-import-buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
+@media(max-width:700px){.sales-import-controls select{min-width:0;width:100%}.sales-import-controls label{width:100%}}
+
+/* v1.1: form import collapsed by default; keep original upload controls unchanged */
+.sales-import-top-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.sales-import-top-actions .sales-button{white-space:nowrap}
+.sales-import-top-actions .sales-import-toggle{border-color:#e5b847;background:#fff9e7;color:#172842}
+.sales-import-top-actions .sales-import-toggle:hover{background:#fff0bf;border-color:#d0a72b}
+@media(max-width:700px){.sales-import-top-actions{justify-content:flex-start}}
