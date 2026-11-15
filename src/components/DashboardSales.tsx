@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import './DashboardSalesFinal.css'
 import { supabase } from '../lib/supabase'
@@ -42,6 +42,13 @@ export default function DashboardSales({role,outletId,outlets,month,year,teamOnD
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
   const [refresh,setRefresh]=useState(0)
+  const [hasLoaded,setHasLoaded]=useState(false)
+  const requestSequence=useRef(0)
+  // AM downloads the area data once per period. Outlet filters are applied locally.
+  // Leader remains scoped to their own outlet.
+  const queryOutletId=role==='AM'?'':outletId
+  const visibleActuals=useMemo(()=>outletId?actuals.filter(x=>x.outlet_id===outletId):actuals,[actuals,outletId])
+  const visibleTargets=useMemo(()=>outletId?targets.filter(x=>x.outlet_id===outletId):targets,[targets,outletId])
   const isAll=role==='AM'&&!outletId
   const outletCount=isAll?outlets.length:1
   const lastMonthDate=new Date(year,month-2,1)
@@ -49,6 +56,7 @@ export default function DashboardSales({role,outletId,outlets,month,year,teamOnD
   const previousMonthYear=lastMonthDate.getFullYear()
 
   const load=useCallback(async()=>{
+    const requestId=++requestSequence.current
     setLoading(true);setError('')
     // Three monthly ranges; only selected outlet is fetched for leaders.
     const ranges=[
@@ -59,7 +67,7 @@ export default function DashboardSales({role,outletId,outlets,month,year,teamOnD
     const get=async(table:string,column:string):Promise<ValueRow[]>=>{
       const chunks=await Promise.all(ranges.map(async([start,end])=>{
         let query=supabase.from(table).select(`outlet_id,sales_date,${column}`).gte('sales_date',start).lte('sales_date',end)
-        if(outletId)query=query.eq('outlet_id',outletId)
+        if(queryOutletId)query=query.eq('outlet_id',queryOutletId)
         const {data,error}=await query
         if(error) throw error
         return (data??[]) as unknown as ValueRow[]
@@ -68,11 +76,11 @@ export default function DashboardSales({role,outletId,outlets,month,year,teamOnD
     }
     try {
       const [a,t]=await Promise.all([get('sales_daily_actuals','actual_amount'),get('sales_daily_targets','target_amount')])
-      setActuals(a);setTargets(t)
+      if(requestId===requestSequence.current){setActuals(a);setTargets(t);setHasLoaded(true)}
     } catch(e) {
-      setError(e instanceof Error?e.message:'Gagal memuat laporan sales')
-    } finally {setLoading(false)}
-  },[year,month,previousMonth,previousMonthYear,outletId])
+      if(requestId===requestSequence.current)setError(e instanceof Error?e.message:'Gagal memuat laporan sales')
+    } finally {if(requestId===requestSequence.current)setLoading(false)}
+  },[year,month,previousMonth,previousMonthYear,queryOutletId])
   useEffect(()=>{void load()},[load,refresh])
   useEffect(()=>{
     const onFocus=()=>setRefresh(x=>x+1)
@@ -88,16 +96,16 @@ export default function DashboardSales({role,outletId,outlets,month,year,teamOnD
     const isFuture=today<first
     const cutoff=isFuture||today>end?new Date(year,month,0).getDate():Number(today.slice(-2))
     return {
-      current:snapshot(year,month,cutoff,outletCount,actuals,targets),
-      previous:snapshot(previousMonthYear,previousMonth,cutoff,outletCount,actuals,targets),
-      lastYear:snapshot(year-1,month,cutoff,outletCount,actuals,targets),
+      current:snapshot(year,month,cutoff,outletCount,visibleActuals,visibleTargets),
+      previous:snapshot(previousMonthYear,previousMonth,cutoff,outletCount,visibleActuals,visibleTargets),
+      lastYear:snapshot(year-1,month,cutoff,outletCount,visibleActuals,visibleTargets),
       cutoff,
       isFuture,
     }
-  },[actuals,targets,year,month,outletCount,previousMonthYear,previousMonth])
+  },[visibleActuals,visibleTargets,year,month,outletCount,previousMonthYear,previousMonth])
 
-  if(loading)return <section className="panel"><h3>Sales Performance</h3><p className="muted">Memuat data Sales...</p></section>
-  if(error)return <section className="panel"><h3>Sales Performance</h3><p className="sales-alert error">{error}</p><button className="sales-button" onClick={()=>setRefresh(x=>x+1)}>Coba lagi</button></section>
+  if(loading&&!hasLoaded)return <section className="panel"><h3>Sales Performance</h3><p className="muted">Memuat data Sales...</p></section>
+  if(error&&!hasLoaded)return <section className="panel"><h3>Sales Performance</h3><p className="sales-alert error">{error}</p><button className="sales-button" onClick={()=>setRefresh(x=>x+1)}>Coba lagi</button></section>
 
   const {current,previous,lastYear}=data
   // Periode berjalan/lampau mempertahankan rumus lama.
@@ -105,10 +113,10 @@ export default function DashboardSales({role,outletId,outlets,month,year,teamOnD
   const comparable=data.isFuture?current.targetDays>0:(current.actualDays>0&&current.targetDays>0)
   const achievement=comparable&&current.target>0?(current.actual/current.target*100):null
   const gap=comparable?current.actual-current.target:null
-  const monthlyTarget=targets
+  const monthlyTarget=visibleTargets
     .filter(x=>x.sales_date>=key(year,month,1)&&x.sales_date<=key(year,month,new Date(year,month,0).getDate()))
     .reduce((sum,x)=>sum+Number(x.target_amount||0),0)
-  const monthlyTargetCount=targets.filter(x=>x.sales_date>=key(year,month,1)&&x.sales_date<=key(year,month,new Date(year,month,0).getDate())).length
+  const monthlyTargetCount=visibleTargets.filter(x=>x.sales_date>=key(year,month,1)&&x.sales_date<=key(year,month,new Date(year,month,0).getDate())).length
   const expectedMonthlyDays=new Date(year,month,0).getDate()*outletCount
   const compareData=[
     {title:'MTD Bulan Dipilih',value:current.actual},
@@ -123,6 +131,8 @@ export default function DashboardSales({role,outletId,outlets,month,year,teamOnD
   const diffText=(v:number|null)=>v===null?'—':`${v>0?'+':v<0?'−':''}${fmt(Math.abs(v))}`
   const tile=(label:string,value:string,note:string,negative=false)=> <div className="stat-card dashboard-kpi-card" key={label}><div className="stat-title">{label}</div><div className="stat-empty" style={{color:negative?'#c73333':'#142039'}}>{value}</div><div className="dashboard-kpi-note">{note}</div></div>
   return <>
+    {error&&<p className="sales-alert error" role="alert">Data Sales gagal diperbarui: {error} <button className="sales-button secondary" onClick={()=>setRefresh(x=>x+1)}>Coba lagi</button></p>}
+    {loading&&hasLoaded&&<span role="status" style={{display:'block',fontSize:11,color:'#72839c',marginTop:8}}>Memperbarui data Sales…</span>}
     <div className="stats">
       {tile('Sales MTD',fmt(current.actual),'Pencapaian sales')}
       {tile('Target Sales',fmt(current.target),`Target Sales ${monthLabel(year,month)}`)}
