@@ -4,7 +4,7 @@ import './DashboardSalesFinal.css'
 import { supabase } from '../lib/supabase'
 
 type Outlet = { id: string; outlet_name: string; outlet_code: string }
-type Props = { role: 'AM' | 'LEADER'; outletId: string; outlets: Outlet[]; month: number; year: number; teamOnDuty?: ReactNode }
+type Props = { role: 'AM' | 'LEADER'; outletId: string; outlets: Outlet[]; month: number; year: number; teamOnDuty?: ReactNode; operationalOverview?: ReactNode }
 type ValueRow = { outlet_id: string; sales_date: string; target_amount?: number; actual_amount?: number }
 
 type Snapshot = {
@@ -36,7 +36,7 @@ function snapshot(year:number, month:number, cutoffDay:number, outletCount:numbe
   return {label:monthLabel(year,month),actual,target,actualDays:actualByDate.size,targetDays:targetByDate.size,matchedDays,matchedActual,matchedTarget,totalDays:days*outletCount}
 }
 
-export default function DashboardSales({role,outletId,outlets,month,year,teamOnDuty}:Props) {
+export default function DashboardSales({role,outletId,outlets,month,year,teamOnDuty,operationalOverview}:Props) {
   const [actuals,setActuals]=useState<ValueRow[]>([])
   const [targets,setTargets]=useState<ValueRow[]>([])
   const [loading,setLoading]=useState(true)
@@ -129,6 +129,7 @@ export default function DashboardSales({role,outletId,outlets,month,year,teamOnD
       {tile('Selisih Actual vs Target',gap===null?'—':fmt(gap),'Selisih pencapaian Sales vs Target',gap!==null&&gap<0)}
       {tile('Achievement MTD',achievement===null?'—':achievement.toFixed(2)+'%','Persentase Pencapaian Sales')}
     </div>
+    {operationalOverview}
     <div className="dashboard-grid dashboard-sales-team-grid">
       <section className="panel dashboard-sales-compare-panel">
         <h3>Perbandingan Sales</h3>

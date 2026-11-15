@@ -7,6 +7,7 @@ type Props = { role: 'AM' | 'LEADER'; outletId: string; outlets: Outlet[]; month
 type Dso = { outlet_id: string; check_date: string; status: 'aman' | 'hitung_ulang'; issues: string; am_notes: string }
 type Maintenance = { id: string; outlet_id: string; equipment: string; status: string; priority: string; created_at: string }
 type Visit = { id: string; outlet_id: string; finding: string; status: string; due_date: string; visit_date: string }
+type TodayAMVisit = {shift:string;visit_1_outlet_id:string|null;visit_1_activity:string;visit_2_outlet_id:string|null;visit_2_activity:string;online_outlet_id:string|null;online_activity:string}
 type Piq = { outlet_id: string; audit_month: number; score_1: number; score_2: number; score_3: number; score_4: number; score_5: number; score_6: number; score_7: number }
 const iso = (y: number, m: number, d: number) => `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`
 const dateWIB = () => { const parts = new Intl.DateTimeFormat('en-GB',{ timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const get=(t:string)=>Number(parts.find(p=>p.type===t)?.value||0);return {year:get('year'),month:get('month'),day:get('day')} }
@@ -24,6 +25,7 @@ export default function OperationalOverview({role,outletId,outlets,month,year}:P
   const [maint,setMaint]=useState<Maintenance[]>([])
   const [visit,setVisit]=useState<Visit[]>([])
   const [piq,setPiq]=useState<Piq[]>([])
+   const [todayVisit,setTodayVisit]=useState<TodayAMVisit|null>(null)
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
   const [revision,setRevision]=useState(0)
@@ -45,10 +47,10 @@ export default function OperationalOverview({role,outletId,outlets,month,year}:P
         let v=supabase.from('am_visit_findings').select('id,outlet_id,finding,status,due_date,visit_date').neq('status','done').order('due_date',{ascending:true}).limit(300)
         let p=supabase.from('piq_audits').select('outlet_id,audit_month,score_1,score_2,score_3,score_4,score_5,score_6,score_7').eq('audit_year',year)
         if(outletId){ d=d.eq('outlet_id',outletId);m=m.eq('outlet_id',outletId);v=v.eq('outlet_id',outletId);p=p.eq('outlet_id',outletId) }
-        const [dr,mr,vr,pr]=await Promise.all([d,m,v,p])
-        const fail=[dr.error,mr.error,vr.error,pr.error].find(Boolean)
+        const [dr,mr,vr,pr,amr]=await Promise.all([d,m,v,p,role==='AM'?supabase.from('am_visit_schedule').select('shift,visit_1_outlet_id,visit_1_activity,visit_2_outlet_id,visit_2_activity,online_outlet_id,online_activity').eq('visit_date',todayKey).maybeSingle():Promise.resolve({data:null,error:null})])
+        const fail=[dr.error,mr.error,vr.error,pr.error,amr.error].find(Boolean)
         if(fail)throw fail
-        if(!cancelled){setDso(dr.data as Dso[]||[]);setMaint(mr.data as Maintenance[]||[]);setVisit(vr.data as Visit[]||[]);setPiq(pr.data as Piq[]||[])}
+        if(!cancelled){setDso(dr.data as Dso[]||[]);setMaint(mr.data as Maintenance[]||[]);setVisit(vr.data as Visit[]||[]);setPiq(pr.data as Piq[]||[]);setTodayVisit((amr.data as TodayAMVisit|null)||null)}
       }catch(e){if(!cancelled)setError('Gagal memuat ringkasan operasional: '+errorText(e))}
       finally{if(!cancelled)setLoading(false)}
     }
@@ -65,14 +67,15 @@ export default function OperationalOverview({role,outletId,outlets,month,year}:P
   const overdue=openVisit.filter(x=>x.due_date<todayIso)
   const currentPiq=piq.filter(x=>selectedIds.has(x.outlet_id)&&x.audit_month===month)
   const avgPiq=currentPiq.length?currentPiq.reduce((a,p)=>a+piqScore(p),0)/currentPiq.length:null
-  const monthLabel=new Date(year,month-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})
+  const todayVisitParts=role==='AM'&&todayVisit?[{outlet:todayVisit.visit_1_outlet_id,activity:todayVisit.visit_1_activity,type:'Visit 1'},{outlet:todayVisit.visit_2_outlet_id,activity:todayVisit.visit_2_activity,type:'Visit 2'}].filter(x=>x.outlet):[]
+   const monthLabel=new Date(year,month-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})
   return <section className="ops-overview" aria-label="Ringkasan Operasional">
     <div className="ops-overview-head"><div><h3>Ringkasan Operasional</h3><p>{monthLabel} · {role==='AM'&&!outletId?'8 outlet Area Bandung 2':selected[0]?.outlet_name||'Outlet'}</p></div><button type="button" onClick={reload} disabled={loading}>{loading?'Memuat…':'↻ Refresh'}</button></div>
     {error&&<p className="ops-overview-error" role="alert">{error}</p>}
     <div className="ops-overview-stats ops-overview-stats-three">
       <article><span>Maintenance Aktif</span><strong>{openMaint.length}</strong><em>Tidak termasuk selesai/ditolak</em></article>
       <article><span>Temuan Visit</span><strong>{openVisit.length}</strong><em>Lewat due date: {overdue.length}</em></article>
-      <article><span>PIQ Bulan Dipilih</span><strong>{avgPiq===null?'—':`${avgPiq.toLocaleString('id-ID',{maximumFractionDigits:1})} poin`}</strong><em>{currentPiq.length} audit · Maksimal 14 poin</em></article>
+      {role==='AM'?<article className="ops-am-today-card"><span>Visit Hari Ini</span>{todayVisitParts.length? <div className="ops-today-visits">{todayVisitParts.map((x,i)=><div className="ops-today-visit" key={i}><b>{x.type}: {({'BEC Atas':'BEC','BIP Atas':'BIP','Ciwalk Depan':'Ciwalk','Yogya Sunda':'Sunda','Yogya Kepatihan':'Kepatihan','Griya Antapani':'Antapani'} as Record<string,string>)[labelById.get(x.outlet!)||'']||labelById.get(x.outlet!)||'Outlet'}</b>{x.activity && <span className="ops-today-activity"> - {x.activity}</span>}</div>)}</div>:<strong className="ops-today-empty">Tidak ada visit</strong>}<em>{nice(todayKey)} · Shift {todayVisit?.shift||'—'}</em></article>:<article><span>PIQ Bulan Dipilih</span><strong>{avgPiq===null?'—':`${avgPiq.toLocaleString('id-ID',{maximumFractionDigits:1})} poin`}</strong><em>{currentPiq.length} audit · Maksimal 14 poin</em></article>}
     </div>
     <div className="ops-overview-lists ops-overview-lists-three">
       <article><h4>DSO Hari Ini</h4>

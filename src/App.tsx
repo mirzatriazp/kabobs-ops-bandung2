@@ -14,6 +14,7 @@ import PIQPerformance from './components/PIQPerformance'
 import ProfileOutlet from './components/ProfileOutlet'
 import DataTeam from './components/DataTeam'
 import Schedule from './components/Schedule'
+import ScheduleVisitAM from './components/ScheduleVisitAM'
 import TeamOnDutyDashboard from './components/TeamOnDutyDashboard'
 import InventoryDSO from './components/InventoryDSO'
 import OutletRanking from './components/OutletRanking'
@@ -66,6 +67,7 @@ const modules = [
   ['Defect & Maintenance', 'Pengajuan service order'],
   ['Data Team', 'Crew dan atribut kerja'],
   ['Schedule', 'Perencanaan dan validasi jadwal'],
+  ['Schedule Visit AM', 'Agenda visit dan rekap kegiatan Area Manager'],
   ['PIQ Performance', 'Hasil audit internal'],
   ['Peringkat Outlet', 'Ranking area Bandung 2'],
   ['Template BA', 'Download dokumen'],
@@ -172,6 +174,9 @@ export default function App() {
         setError('Akses akun belum dapat dimuat. Periksa RLS dan profil pengguna.')
         return
       }
+      if (p.data.role !== 'AM' && sessionStorage.getItem(MODULE_STORE) === 'Schedule Visit AM') {
+        setActivePage('Dashboard')
+      }
       setProfile(p.data as Profile)
       setOutlets((o.data ?? []) as Outlet[])
       if (p.data.role === 'LEADER' && p.data.outlet_id) setSelectedOutlet(p.data.outlet_id)
@@ -250,7 +255,7 @@ export default function App() {
         <div className="top-actions"><span className="user-name">{profile.full_name} · {profile.role === 'AM' ? 'Area Manager' : name}</span><button className="secondary-button" onClick={() => setAccountOpen(true)}>Ganti Password</button><button className="secondary-button" onClick={logout}>Keluar</button></div>
       </div>
       <nav className="horizontal-nav" aria-label="Menu operasional">
-        {modules.map(([title]) => <button key={title} className={activePage === title ? 'nav-active' : ''} onClick={() => setActivePage(title)}>{title}</button>)}
+        {modules.filter(([title]) => profile.role === 'AM' || title !== 'Schedule Visit AM').map(([title]) => <button key={title} className={activePage === title ? 'nav-active' : ''} onClick={() => setActivePage(title)}>{title}</button>)}
       </nav>
     </header>
     {accountOpen && <AccountSecurity profile={profile} outlets={outlets} onClose={() => setAccountOpen(false)} onPasswordChanged={() => { setAccountOpen(false); void logout() }} />}
@@ -275,20 +280,19 @@ export default function App() {
         </div>
         {activePage === 'Dashboard' ? <>
           <section className="hero"><div className="eyebrow light">LIVE OPERATIONS · AREA BANDUNG 2</div><h2>{greeting()}, {name}!</h2><p className="dashboard-hero-description" style={{ textAlign: 'center', marginInline: 'auto' }}>Pantau performa, aktivitas tim, agenda, dan tindak lanjut operasional dalam satu sistem.</p><span className="hero-note">Database: Terhubung · Role: {profile.role}</span></section>
-          {/* Ringkasan Operasional diletakkan paling atas agar langsung terlihat. */}
-          <OperationalOverview
-            role={profile.role}
-            outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
-            outlets={outlets}
-            month={month}
-            year={year}
-          />
           <DashboardSales
             role={profile.role}
             outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
             outlets={outlets}
             month={month}
             year={year}
+            operationalOverview={<OperationalOverview
+              role={profile.role}
+              outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
+              outlets={outlets}
+              month={month}
+              year={year}
+            />}
             teamOnDuty={<TeamOnDutyDashboard
               role={profile.role}
               outletId={profile.role === 'AM' ? selectedOutlet : (profile.outlet_id ?? '')}
@@ -337,6 +341,8 @@ export default function App() {
       month={month}
       year={year}
     />
+    : activePage === 'Schedule Visit AM' && profile.role === 'AM'
+  ? <ScheduleVisitAM year={year} month={month} outlets={outlets} />
     : activePage === 'Inventory & DSO'
   ? <InventoryDSO
       role={profile.role}
