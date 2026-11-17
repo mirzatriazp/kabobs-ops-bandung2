@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import AccountSecurity from './components/AccountSecurity'
 import type { FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
@@ -74,6 +74,15 @@ const modules = [
   ['Live Chat', 'Komunikasi antaroutlet'],
 ]
 
+// Navigation only: keep module keys identical to existing page routing.
+const NAV_GROUPS = [
+  { id: 'Dashboard', icon: 'home', pages: ['Dashboard'] },
+  { id: 'Operasional Outlet', icon: 'bar-chart', pages: ['Profile Outlet', 'Sales Report', 'Inventory & DSO', 'Defect & Maintenance', 'Schedule', 'Schedule Visit AM'] },
+  { id: 'Tim & Aktivitas', icon: '♙', pages: ['General Information', 'Calendar Activity', 'Data Team', 'Live Chat'] },
+  { id: 'Monitoring & Evaluasi', icon: '◉', pages: ['Report Visit AM', 'PIQ Performance', 'Peringkat Outlet'] },
+  { id: 'Dokumen', icon: '▤', pages: ['Template BA'] },
+] as const
+
 function greeting() {
   const h = Number(new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Jakarta'
@@ -94,11 +103,26 @@ export default function App() {
     const stored = sessionStorage.getItem(MODULE_STORE)
     return stored && modules.some(([title]) => title === stored) ? stored : 'Dashboard'
   })
+  const [expandedGroup, setExpandedGroup] = useState<string>('')
   const [accountOpen, setAccountOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement | null>(null)
   const [sessionMessage, setSessionMessage] = useState('')
   const [selectedOutlet, setSelectedOutlet] = useState('')
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
+
+  useEffect(() => {
+    if (!userMenuOpen) return
+    const onPointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !userMenuRef.current?.contains(event.target)) setUserMenuOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setUserMenuOpen(false) }
+    document.addEventListener('pointerdown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('pointerdown', onPointer); document.removeEventListener('keydown', onKey) }
+  }, [userMenuOpen])
+
 
   // Restore only sessions with a valid activity record for today (WIB).
   useEffect(() => {
@@ -120,6 +144,12 @@ export default function App() {
   }, [])
 
   useEffect(() => { sessionStorage.setItem(MODULE_STORE, activePage) }, [activePage])
+  // Click a module to close its dropdown without disturbing the selected page.
+  const navigateTo = (page: string) => {
+    setActivePage(page)
+    setExpandedGroup('')
+  }
+
 
   // A token refresh is NOT counted as user activity. Only actual interactions reset the clock.
   useEffect(() => {
@@ -229,7 +259,7 @@ export default function App() {
     setProfile(null)
   }
 
-  if (loading) return <div className="loading">Memuat KABOBS Operational Hub...</div>
+  if (loading) return <div className="loading">Mohon tunggu, sedang menyiapkan halaman…</div>
   if (!session) return <main className="login-screen">
     <div className="login-panel">
       <img className="kabobs-login-logo" src={`${import.meta.env.BASE_URL}kabobs-logo.png`} alt="Kabobs Premium Kebab" />
@@ -246,16 +276,47 @@ export default function App() {
     </div>
   </main>
 
-  if (!profile) return <div className="loading">{error || 'Memuat hak akses pengguna...'}</div>
+  if (!profile) return <div className="loading">{error || 'Mohon tunggu, sedang menyiapkan halaman…'}</div>
 
-  return <div className="app-shell horizontal-shell">
+  return <div className="app-shell horizontal-shell kabobs-topnav-shell">
     <header className="site-header">
       <div className="site-topbar">
-        <div className="side-brand"><img className="kabobs-header-logo" src={`${import.meta.env.BASE_URL}kabobs-logo.png`} alt="Logo Kabobs" /><span><strong>KABOBS Operational Hub</strong><small>AREA BANDUNG 2</small></span></div>
-        <div className="top-actions"><span className="user-name">{profile.full_name} · {profile.role === 'AM' ? 'Area Manager' : name}</span><button className="secondary-button" onClick={() => setAccountOpen(true)}>Ganti Password</button><button className="secondary-button" onClick={logout}>Keluar</button></div>
+        <div className="side-brand kabobs-brand-inline"><img className="kabobs-header-logo" src={`${import.meta.env.BASE_URL}kabobs-logo.png`} alt="Logo Kabobs" /><span className="kabobs-brand-inline-text"><strong>KABOBS OPERATIONAL HUB</strong><span className="kabobs-brand-divider" aria-hidden="true">·</span><span className="kabobs-brand-area">AREA BANDUNG 2</span></span></div>
+        <div className="top-actions">
+          <div className="kabobs-user-menu" ref={userMenuRef}>
+            <button type="button" className="kabobs-user-trigger" aria-haspopup="menu" aria-expanded={userMenuOpen} onClick={() => setUserMenuOpen(v => !v)}>
+              <span className="kabobs-user-name">{profile.full_name}</span><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+            {userMenuOpen && <div className="kabobs-user-dropdown" role="menu">
+              <button type="button" role="menuitem" onClick={() => { setUserMenuOpen(false); setAccountOpen(true) }}>Ganti Password</button>
+              <button type="button" role="menuitem" onClick={() => { setUserMenuOpen(false); void logout() }}>Log Out</button>
+            </div>}
+          </div>
+        </div>
       </div>
-      <nav className="horizontal-nav" aria-label="Menu operasional">
-        {modules.filter(([title]) => profile.role === 'AM' || title !== 'Schedule Visit AM').map(([title]) => <button key={title} className={activePage === title ? 'nav-active' : ''} onClick={() => setActivePage(title)}>{title}</button>)}
+      <nav className="kabobs-topnav" aria-label="Menu operasional">
+        {NAV_GROUPS.map(group => {
+          const pages = group.pages.filter(page => profile.role === 'AM' || page !== 'Schedule Visit AM')
+          const active = pages.some(page => page === activePage)
+          const open = expandedGroup === group.id
+          return <div className="kabobs-topnav-group" key={group.id}>
+            <button type="button" className={`kabobs-topnav-trigger${active ? ' is-active' : ''}${open ? ' is-open' : ''}`}
+              aria-expanded={group.id === 'Dashboard' ? undefined : open}
+              onClick={() => group.id === 'Dashboard' ? navigateTo('Dashboard') : setExpandedGroup(open ? '' : group.id)}>
+              <span className="kabobs-topnav-symbol" aria-hidden="true">{group.icon === 'home' ?
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 10 9-7 9 7"/><path d="M5 9v12h14V9"/><path d="M9 21v-7h6v7"/></svg>
+                : group.icon === 'bar-chart' ?
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20V11"/><path d="M10 20V5"/><path d="M16 20v-9"/><path d="M22 20V3"/><path d="M2 20h20"/></svg>
+                : group.icon}</span>
+              <span>{group.id}</span>
+              {group.id !== 'Dashboard' && <span className="kabobs-topnav-chevron" aria-hidden="true">{open ? '⌃' : '⌄'}</span>}
+            </button>
+            {group.id !== 'Dashboard' && open && <div className="kabobs-topnav-dropdown">
+              {pages.map(page => <button type="button" key={page} className={`kabobs-topnav-child${activePage === page ? ' is-active' : ''}`}
+                onClick={() => navigateTo(page)}>{page === 'Template BA' ? 'Template Berita Acara' : page === 'Data Team' ? 'Data Team Outlet' : page}</button>)}
+            </div>}
+          </div>
+        })}
       </nav>
     </header>
     {accountOpen && <AccountSecurity profile={profile} outlets={outlets} onClose={() => setAccountOpen(false)} onPasswordChanged={() => { setAccountOpen(false); void logout() }} />}
