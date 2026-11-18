@@ -59,3 +59,21 @@
 .piq-reward-yes,.piq-reward-no {display:inline-block;padding:5px 8px;border-radius:6px;font-weight:750;white-space:nowrap;}
 .piq-reward-yes {background:#dcf7e9;color:#137645;}
 .piq-reward-no {background:#fff2ca;color:#8f5b00;}
+
+/* PIQ Excel Import/Export — AM only */
+.piq-excel-panel{background:#f8fafc;border:1px solid #dce4ef;border-radius:13px;padding:16px;margin:12px 0 20px;display:grid;gap:12px}
+.piq-excel-title{text-align:center}.piq-excel-title strong{font-size:14px}.piq-excel-title p{margin:5px 0 0;color:#71839e;line-height:1.6}
+.piq-excel-actions{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;align-items:center}
+.piq-excel-actions .piq-excel-upload{display:inline-flex;align-items:center;justify-content:center;background:#f6c43e;border:1px solid #f6c43e;border-radius:9px;color:#14213d;padding:10px 13px;font-size:12px;font-weight:700;cursor:pointer}
+.piq-excel-upload input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.piq-excel-actions .piq-excel-upload:has(input:disabled){opacity:.55;cursor:wait}
+.piq-excel-help{text-align:center;font-size:11px;line-height:1.7;color:#73829b;margin:0}
+.piq-excel-progress{color:#6d7c93;text-align:center;margin:0}
+.piq-excel-preview{border:1px solid #dbe2ec;border-radius:11px;background:#fff;padding:14px;display:grid;gap:10px}
+.piq-excel-preview>p{margin:0;font-size:11px;color:#75839b}
+.piq-excel-table-scroll{max-width:100%;overflow:auto}
+.piq-excel-table-scroll table{border-collapse:collapse;width:100%;min-width:840px;font-size:11px}
+.piq-excel-table-scroll th{background:#15213c;color:#fff;text-align:left;padding:9px}
+.piq-excel-table-scroll td{border-bottom:1px solid #e6ebf3;padding:9px}
+.piq-excel-confirm{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:650;color:#9c4f1e}
+.piq-excel-confirm input{width:16px;height:16px;flex:none}
