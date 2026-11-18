@@ -79,7 +79,6 @@ export default function SalesReport({role,outletId,outlets,month,year}:Props) {
   const today = todayID()
   const asOf = today < start ? null : today > end ? end : today
   const eligibleRows = tableRows.filter(r=>asOf && r.date<=asOf)
-  const totalTarget=eligibleRows.reduce((sum,r)=>sum+(r.target||0),0)
   const totalActual=eligibleRows.reduce((sum,r)=>sum+(r.actual||0),0)
   const allActual=actuals.reduce((s,r)=>s+Number(r.actual_amount),0)
   const allTarget=targets.reduce((s,r)=>s+Number(r.target_amount),0)
@@ -87,13 +86,11 @@ export default function SalesReport({role,outletId,outlets,month,year}:Props) {
   const areaComparable=actuals.length>0 && targets.length>0
   const areaGap=areaComparable ? allActual-allTarget : null
   const areaAchievement=areaComparable ? pct(allActual,allTarget) : '—'
-  const targetDays=eligibleRows.filter(r=>r.target!==null).length
   const actualDays=eligibleRows.filter(r=>r.actual!==null).length
-  // Summary comparisons use the same selected MTD cutoff; missing days are not zero sales.
-  const mtdComparable=targetDays>0 && actualDays>0
-  const mtdGap=mtdComparable?totalActual-totalTarget:null
-  const mtdAchievement=mtdComparable?pct(totalActual,totalTarget):'—'
-  const displayedGap=isAll?areaGap:mtdGap
+  // Achievement compares actual MTD against the FULL monthly target, not target to date.
+  const monthlyGap=actualDays>0 && targets.length>0 ? totalActual-allTarget : null
+  const mtdAchievement=actualDays>0 && targets.length>0 ? pct(totalActual,allTarget) : '—'
+  const displayedGap=isAll?areaGap:monthlyGap
 
   function exportExcel(){
     if(role!=='AM'||working||periodError)return
@@ -254,8 +251,8 @@ export default function SalesReport({role,outletId,outlets,month,year}:Props) {
       {feedback && <div role="status" className={'sales-alert '+messageType}>{feedback}</div>}
       <div className="sales-summary">
         <div className="sales-metric"><small>{role==='AM'?'SALES MTD':'Actual MTD'}</small><strong>{isAll?fmt(allActual):fmt(totalActual)}</strong><span>{role==='AM'?'Sales Actual MTD':'Pencapaian Sales MTD'}</span></div>
-        <div className="sales-metric"><small>TARGET SALES</small><strong>{fmt(isAll?allTarget:totalTarget)}</strong><span>{`Target Sales ${selectedMonthLabel}`}</span></div>
-        <div className="sales-metric"><small>{role==='AM'?'SELISIH SALES VS TARGET':'Selisih Actual MTD vs Target MTD'}</small><strong style={{color:displayedGap!==null&&displayedGap<0?'#c73333':'#142039'}}>{displayedGap===null?'—':fmt(displayedGap)}</strong><span>{role==='AM'?'Selisih Sales Actual vs Target':'Selisih Actual Sales vs Target'}</span></div>
+        <div className="sales-metric"><small>TARGET SALES</small><strong>{fmt(allTarget)}</strong><span>{`Target Sales ${selectedMonthLabel}`}</span></div>
+        <div className="sales-metric"><small>{role==='AM'?'SELISIH SALES VS TARGET':'Selisih Actual MTD vs Target Bulanan'}</small><strong style={{color:displayedGap!==null&&displayedGap<0?'#c73333':'#142039'}}>{displayedGap===null?'—':fmt(displayedGap)}</strong><span>{role==='AM'?'Selisih Sales Actual vs Target':'Selisih Actual Sales vs Target'}</span></div>
         <div className="sales-metric"><small>ACHIEVEMENT SALES VS TARGET</small><strong>{isAll?areaAchievement:mtdAchievement}</strong><span>Achievement Actual vs Target</span></div>
       </div>
       {isAll ? <>

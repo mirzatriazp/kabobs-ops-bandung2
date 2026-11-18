@@ -111,12 +111,13 @@ export default function DashboardSales({role,outletId,outlets,month,year,teamOnD
   // Periode berjalan/lampau mempertahankan rumus lama.
   // Periode mendatang menampilkan target yang sudah diinput walau actual belum ada.
   const comparable=data.isFuture?current.targetDays>0:(current.actualDays>0&&current.targetDays>0)
-  const achievement=comparable&&current.target>0?(current.actual/current.target*100):null
-  const gap=comparable?current.actual-current.target:null
   const monthlyTarget=visibleTargets
     .filter(x=>x.sales_date>=key(year,month,1)&&x.sales_date<=key(year,month,new Date(year,month,0).getDate()))
     .reduce((sum,x)=>sum+Number(x.target_amount||0),0)
   const monthlyTargetCount=visibleTargets.filter(x=>x.sales_date>=key(year,month,1)&&x.sales_date<=key(year,month,new Date(year,month,0).getDate())).length
+  // Achievement uses the full monthly target, consistent with Sales Report.
+  const achievement=comparable&&monthlyTarget>0?(current.actual/monthlyTarget*100):null
+  const gap=current.actualDays>0 && monthlyTargetCount>0?current.actual-monthlyTarget:null
   const expectedMonthlyDays=new Date(year,month,0).getDate()*outletCount
   const compareData=[
     {title:'MTD Bulan Dipilih',value:current.actual},
@@ -135,7 +136,7 @@ export default function DashboardSales({role,outletId,outlets,month,year,teamOnD
     {loading&&hasLoaded&&<span role="status" style={{display:'block',fontSize:11,color:'#72839c',marginTop:8}}>Memperbarui data Sales…</span>}
     <div className="stats">
       {tile('Sales MTD',fmt(current.actual),'Pencapaian sales')}
-      {tile('Target Sales',fmt(current.target),`Target Sales ${monthLabel(year,month)}`)}
+      {tile('Target Sales',fmt(monthlyTarget),`Target Sales ${monthLabel(year,month)}`)}
       {tile('Selisih Actual vs Target',gap===null?'—':fmt(gap),'Selisih pencapaian Sales vs Target',gap!==null&&gap<0)}
       {tile('Achievement MTD',achievement===null?'—':achievement.toFixed(2)+'%','Persentase Pencapaian Sales')}
     </div>
